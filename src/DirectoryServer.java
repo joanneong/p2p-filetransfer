@@ -1,4 +1,3 @@
-import java.util.ArrayList;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.io.IOException;
@@ -104,7 +103,24 @@ public class DirectoryServer {
     }
 
     private void handleExitMsg(Socket client) {
-        // TODO
+        String clientIpAddress = client.getInetAddress().toString();
+        int clientPort = client.getPort();
+        Host clientHost = new Host(clientIpAddress, clientPort);
+
+        List<Chunk> clientChunks = secondTable.get(clientHost);
+
+        // Remove client information from the first table
+        for (Chunk chunk : clientChunks) {
+            List<Host> hostsForChunk = firstTable.get(chunk);
+            hostsForChunk.remove(clientHost);
+
+            if (hostsForChunk.isEmpty()) {
+                firstTable.remove(chunk);
+            }
+        }
+
+        // Remove client information from the second table
+        secondTable.remove(clientHost);
     }
 
     private String handleClientMsg(Socket client, String[] parsedClientMsg) {
@@ -147,6 +163,7 @@ public class DirectoryServer {
             BufferedReader scanner = new BufferedReader(new InputStreamReader(client.getInputStream()));
             String nextLine = scanner.readLine();
 
+            // TODO: CHECK IF THIS READ WILL TERMINATE
             while (nextLine != null) {
                 messageFromClient += nextLine;
                 nextLine = scanner.readLine();
