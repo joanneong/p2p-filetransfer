@@ -1,3 +1,4 @@
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Set;
@@ -77,6 +78,12 @@ public class DirectoryServer {
         while(true) {
 
         }
+    }
+
+    private String[] parse(String message) {
+        List<String> parsedMessages = new ArrayList<>();
+        String mainContent = message.split(Constant.DELIMITER + Constant.DELIMITER)[0];
+        return mainContent.split(Constant.DELIMITER);
     }
 
     public static void main(String[] args) {
