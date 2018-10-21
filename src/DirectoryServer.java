@@ -1,9 +1,12 @@
 import java.util.HashMap;
+import java.util.List;
 
 public class DirectoryServer {
 
-    private HashMap<Chunk, Host> firstTable;
-    private HashMap<Host, Chunk> secondTable;
+    private HashMap<Chunk, List<Host>> firstTable;
+    private HashMap<Host, List<Chunk>> secondTable;
+
+
 
     /**
      * Constructor
@@ -14,11 +17,31 @@ public class DirectoryServer {
     }
 
     private String getAckMessage() {
-        return "";
+        return Constant.ACK + Constant.DELIMITER + Constant.DELIMITER;
     }
 
     private String getQueryReplyMessage(Chunk chunk) {
-        return "";
+
+        String message = Constant.REPLY + Constant.DELIMITER;
+
+        List<Host> listOfHosts = firstTable.get(chunk);
+
+        if (listOfHosts.size() == 0) {
+
+            // Chunk not exists
+            return message + Constant.CHUNK_NOT_EXIST + Constant.DELIMITER + Constant.DELIMITER;
+
+        } else {
+
+            int randomNumber = (int) Math.random() * listOfHosts.size();
+
+            Host randomlySelectedHost = listOfHosts.get(randomNumber);
+
+            return message + randomlySelectedHost.IPAddress + Constant.DELIMITER
+                    + randomlySelectedHost.portNumber + Constant.DELIMITER
+                    + Constant.DELIMITER;
+        }
+
     }
 
     private String getListReplyMessage() {
