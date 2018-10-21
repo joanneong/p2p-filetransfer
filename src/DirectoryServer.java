@@ -165,9 +165,7 @@ public class DirectoryServer {
     }
 
     private String[] parse(String message) {
-        List<String> parsedMessages = new ArrayList<>();
-        String mainContent = message.split(Constant.DELIMITER + Constant.DELIMITER)[0];
-        return mainContent.split(Constant.DELIMITER);
+        return message.split(Constant.DELIMITER);
     }
 
     public static void main(String[] args) {
