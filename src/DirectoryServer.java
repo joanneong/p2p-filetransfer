@@ -90,7 +90,20 @@ public class DirectoryServer {
         Host clientHost = new Host(clientIpAddress, clientPort);
 
         List<Chunk> clientChunks = secondTable.get(clientHost);
-        firstTable.keySet().removeAll(clientChunks);
+
+        // Remove client information from the first table
+        for (Chunk chunk : clientChunks) {
+            List<Host> hostsForChunk = firstTable.get(chunk);
+            hostsForChunk.remove(clientHost);
+
+            if (hostsForChunk.isEmpty()) {
+                firstTable.remove(chunk);
+            } else {
+                firstTable.put(chunk, hostsForChunk);
+            }
+        }
+
+        // Remove client information from the second table
         secondTable.remove(clientHost);
     }
 
