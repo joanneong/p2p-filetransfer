@@ -145,6 +145,7 @@ public class DirectoryServer {
             BufferedReader scanner = new BufferedReader(new InputStreamReader(client.getInputStream()));
             String nextLine = scanner.readLine();
 
+            // TODO: CHECK IF THIS READ WILL TERMINATE
             while (nextLine != null) {
                 messageFromClient += nextLine;
                 nextLine = scanner.readLine();
