@@ -1,7 +1,11 @@
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.io.IOException;
+import java.net.ServerSocket;
+import java.net.Socket;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Set;
-
 import java.util.stream.Collectors;
 
 public class DirectoryServer {
@@ -66,16 +70,96 @@ public class DirectoryServer {
         return Constant.GOODBYE + Constant.DELIMITER + Constant.DELIMITER;
     }
 
+
+
     /**
      * Send TCP message to client
      */
-    private void send(String messageToSend, String IPAddress, int port) {
+    private void send(Socket client, String messageToSend) {
 
     }
 
-    private void start() {
-        while(true) {
+    private void handleInformMsg(Socket client, String filename, int chunkNumber) {
+        // TODO
+    }
 
+    private void handleExitMsg(Socket client) {
+        // TODO
+    }
+
+    private String handleClientMsg(Socket client, String[] parsedClientMsg) {
+
+        String type = parsedClientMsg[0];
+
+        switch(type) {
+            case Constant.INFORM:
+
+                String filename = parsedClientMsg[1];
+                int chunkNumber = Integer.parseInt(parsedClientMsg[2]);
+                handleInformMsg(client, filename, chunkNumber);
+                return getAckMessage();
+
+            case Constant.QUERY:
+
+                String filename = parsedClientMsg[1];
+                int chunkNumber = Integer.parseInt(parsedClientMsg[2]);
+                return getQueryReplyMessage(filename, chunkNumber);
+
+            case Constant.LIST:
+
+                return getListReplyMessage();
+
+            case Constant.EXIT:
+
+                handleExitMsg(client);
+                return getGoodbyeMessage();
+
+            default:
+                return "This is not a supported operation.";
+        }
+
+    }
+
+    private String getMsgFromClient(Socket client) {
+        try {
+            BufferedReader scanner = new BufferedReader(new InputStreamReader(client.getInputStream()));
+
+            String messageFromClient = "";
+            String nextLine = scanner.readLine();
+
+            while (nextLine != null) {
+                messageFromClient += nextLine;
+                nextLine = scanner.readLine();
+            }
+
+            return messageFromClient;
+        } catch (Exception e) {
+            System.err.println(e.getMessage());
+        }
+    }
+
+    private void handleClientSocket(Socket client) {
+            String messageFromClient = getMsgFromClient(client);
+
+            String[] parsedClientMsg = parse(messageFromClient);
+            String reply = handleClientMsg(client, parsedClientMsg);
+            send(client, reply);
+    }
+
+    private void start() {
+        try {
+            ServerSocket serverSocket = new ServerSocket(Constant.DIR_SERVER_PORT);
+
+            while(true) {
+                System.out.println("The directory server is up and running...");
+
+                Socket clientSocket = serverSocket.accept();
+                System.out.println("New connection request from a client!");
+
+                handleClientSocket(clientSocket);
+            }
+        } catch (IOException ioe) {
+            System.err.println(ioe.getMessage());
         }
     }
 
