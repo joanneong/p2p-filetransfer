@@ -33,7 +33,7 @@ public class DirectoryServer {
 
         List<Host> listOfHosts = firstTable.get(chunk);
 
-        if (listOfHosts.size() == 0) {
+        if (listOfHosts == null || listOfHosts.isEmpty()) {
 
             // Chunk not exists
             return message + Constant.CHUNK_NOT_EXIST + Constant.DELIMITER + Constant.DELIMITER;
@@ -90,11 +90,17 @@ public class DirectoryServer {
 
         //Add to the first table
         List<Host> availableHosts = firstTable.get(chunk);
+        if (availableHosts == null) {
+            availableHosts = new ArrayList<>();
+        }
         availableHosts.add(host);
         firstTable.put(chunk, availableHosts);
 
         // Add to the second table
         List<Chunk> chunksOfTheHost = secondTable.get(host);
+        if(chunksOfTheHost == null) {
+            chunksOfTheHost = new ArrayList<>();
+        }
         chunksOfTheHost.add(chunk);
         secondTable.put(host, chunksOfTheHost);
 
