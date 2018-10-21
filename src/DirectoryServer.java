@@ -5,9 +5,7 @@ public class DirectoryServer {
 
     private HashMap<Chunk, List<Host>> firstTable;
     private HashMap<Host, List<Chunk>> secondTable;
-
-
-
+    
     /**
      * Constructor
      */
@@ -37,8 +35,8 @@ public class DirectoryServer {
 
             Host randomlySelectedHost = listOfHosts.get(randomNumber);
 
-            return message + randomlySelectedHost.IPAddress + Constant.DELIMITER
-                    + randomlySelectedHost.portNumber + Constant.DELIMITER
+            return message + randomlySelectedHost.getIPAddress() + Constant.DELIMITER
+                    + randomlySelectedHost.getPortNumber() + Constant.DELIMITER
                     + Constant.DELIMITER;
         }
 
@@ -105,11 +103,20 @@ public class DirectoryServer {
 
     private class Host {
         private String IPAddress;
+
         private int portNumber;
 
         public Host(String IPAddress, int portNumber) {
             this.IPAddress = IPAddress;
             this.portNumber = portNumber;
+        }
+
+        public String getIPAddress() {
+            return IPAddress;
+        }
+
+        public int getPortNumber() {
+            return portNumber;
         }
 
         @Override
