@@ -82,7 +82,22 @@ public class DirectoryServer {
     }
 
     private void handleInformMsg(Socket client, String filename, int chunkNumber) {
-        // TODO
+        String IPAddress = client.getInetAddress().toString();
+        int portNumber = client.getPort();
+
+        Host host = new Host(IPAddress, portNumber);
+        Chunk chunk = new Chunk(filename, chunkNumber);
+
+        //Add to the first table
+        List<Host> availableHosts = firstTable.get(chunk);
+        availableHosts.add(host);
+        firstTable.put(chunk, availableHosts);
+
+        // Add to the second table
+        List<Chunk> chunksOfTheHost = secondTable.get(host);
+        chunksOfTheHost.add(chunk);
+        secondTable.put(host, chunksOfTheHost);
+
     }
 
     private void handleExitMsg(Socket client) {
