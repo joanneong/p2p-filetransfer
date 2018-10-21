@@ -4,24 +4,73 @@ import java.util.*;
 
 public class P2PClient {
 
-    private String getInformMessage(String fileName) {
-        return "Reply: " + fileName + " informed to server.";
+    private BufferedReader br;
+    private char[] buffer;
+
+    Socket clientSocket;
+
+    PrintWriter pw;
+    Scanner sc;
+
+    private String getInformMessage(String fileName) throws IOException {
+
+        br = new BufferedReader(new FileReader(fileName));
+        buffer = new char[1024];
+
+        int chunkCount = 0;
+        while (br.read(buffer) != 0) {
+            chunkCount++;
+        }
+
+        String toServer = "INFORM\r\n" + fileName + "\r\n" + chunkCount;
+        pw.println(toServer);
+
+        return sc.nextLine();
     }
 
-    private String getQueryMessage(String fileName) {
-        return "Reply: " + fileName + " queried to server.";
+    private String getQueryMessage(String fileName) throws IOException {
+
+        String toServer = "QUERY\r\n" + fileName + "\r\n" + "1";
+        pw.println(toServer);
+
+        return sc.nextLine();
     }
 
     private String getDownloadMessage(String hostList) {
         return "Reply: file downloaded from peer.";
     }
 
-    private String getListMessage() {
-        return "Reply: files listed.";
+    private String getListMessage() throws IOException {
+
+        String toServer = "LIST";
+        pw.println(toServer);
+
+        return sc.nextLine();
     }
 
-    private String getExitMessage() {
-        return "Reply: goodbye.";
+    private String getExitMessage() throws IOException {
+        String toServer = "EXIT";
+        pw.println(toServer);
+
+        String messageReceived =  sc.nextLine();
+
+        sendExitToOwnServer();
+
+        return messageReceived;
+    }
+
+    private void sendExitToOwnServer() throws IOException {
+        Socket socketToOwnServer = new Socket("localhost", 9019);
+        PrintWriter writerToOwnServer = new PrintWriter(socketToOwnServer.getOutputStream(), true);
+        writerToOwnServer.println("EXIT");
+
+        Scanner scFromOwnServer = new Scanner(socketToOwnServer.getInputStream());
+        if (!scFromOwnServer.nextLine().equals("ACK")) {
+            System.out.println("Own host server is not closed!");
+        }
+
+        scFromOwnServer.close();
+        socketToOwnServer.close();
     }
 
     private void send(String messageToSend, String IPAddress, int port) {
@@ -31,44 +80,44 @@ public class P2PClient {
     private void start(String serverIP, int serverPort) throws IOException {
 
         // Create a client socket and connect to the server
-        Socket clientSocket = new Socket(serverIP, serverPort);
+        clientSocket = new Socket(serverIP, serverPort);
         System.out.println("Connected to directory server: " + serverIP + " at port " + serverPort + ".");
 
         // Read user input from keyboard
         Scanner scanner = new Scanner(System.in);
         String fromClient = scanner.next();
 
-        PrintWriter pw = new PrintWriter(clientSocket.getOutputStream(), true);
-        Scanner sc = new Scanner(clientSocket.getInputStream());
+        pw = new PrintWriter(clientSocket.getOutputStream(), true);
+        sc = new Scanner(clientSocket.getInputStream());
 
         String fileName;
-        String replyMessage;
+        String messageReceived;
 
         while (true) {
             switch (fromClient.toLowerCase()) {
             case "inform":
                 fileName = scanner.next();
-                replyMessage = getInformMessage(fileName);
-                System.out.println(replyMessage);
+                messageReceived = getInformMessage(fileName);
+                System.out.println(messageReceived);
                 break;
             case "query":
                 fileName = scanner.next();
-                replyMessage = getQueryMessage(fileName);
-                System.out.println(replyMessage);
+                messageReceived = getQueryMessage(fileName);
+                System.out.println(messageReceived);
                 break;
             case "download":
                 fileName = scanner.next();
-                replyMessage = getQueryMessage(fileName);
-                replyMessage = getDownloadMessage(replyMessage);
-                System.out.println(replyMessage);
+                messageReceived = getQueryMessage(fileName);
+                messageReceived = getDownloadMessage(messageReceived);
+                System.out.println(messageReceived);
                 break;
             case "list":
-                replyMessage = getListMessage();
-                System.out.println(replyMessage);
+                messageReceived = getListMessage();
+                System.out.println(messageReceived);
                 break;
             case "exit":
-                replyMessage = getExitMessage();
-                System.out.println(replyMessage);
+                messageReceived = getExitMessage();
+                System.out.println(messageReceived);
                 break;
             default:
                 System.out.println("Invalid command.");
