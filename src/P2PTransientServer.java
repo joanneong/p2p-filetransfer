@@ -9,7 +9,7 @@ import java.util.*;
 
 
 public class P2PTransientServer {
-    
+
     public static final int PEER_SERVER_PORT = 9019;
     public static final int CHUNK_SIZE = 1024;
     public static final String ACK = "ACK";
@@ -23,33 +23,33 @@ public class P2PTransientServer {
     }
 
     private void start(int port) {
-        //System.out.println("Starting server on port " + port); 
+        //System.out.println("Starting server on port " + port);
         boolean flag = true;
-        
+
         try{
             ServerSocket welcomeSocket = new ServerSocket (port);
-            
+
             while (true) {
                 Socket connectionSocket = welcomeSocket.accept();
                 flag = handleClientSocket(connectionSocket);
             }
-            
+
         } catch (IOException ioe) {
-            
-        }      
+
+        }
     }
 
     /**
      * Handles requests sent by a client
      * @param  client. Socket that handles the client connection
-     * @return a boolean that shows whether we want to close this server. 
+     * @return a boolean that shows whether we want to close this server.
      */
     private boolean handleClientSocket(Socket client) {
         InputStreamReader isr;
         BufferedReader br;
         String fileName;
         int chunkNum;
-        
+
         try {
             isr = new InputStreamReader(client.getInputStream());
             br = new BufferedReader(isr);
@@ -60,12 +60,12 @@ public class P2PTransientServer {
                 return false;
             }
             chunkNum = Integer.parseInt(br.readLine());
-      
+
             sendP2PResponse(client, formP2PResponse(fileName, chunkNum));
         } catch (IOException ioe) {
             return true;
         }
-        
+
         try {
             client.close();
             return true;
@@ -94,13 +94,13 @@ public class P2PTransientServer {
      * @param  chunkNum. The chunk number of the file
      * @return a byte[] that contains the data to be sent to the client
      */
-    private byte[] formP2PResponse(String fileName, int chunkNum) { 
+    private byte[] formP2PResponse(String fileName, int chunkNum) {
         try{
             String directoryPath = this.getClass().getResource("resource/").getPath();
             RandomAccessFile file = new RandomAccessFile(directoryPath + fileName, "r");
             file.seek(CHUNK_SIZE*(chunkNum-1));
             byte[] buffer = new byte[CHUNK_SIZE];
-            file.read(buffer);  
+            file.read(buffer);
             file.close();
             return buffer;
         } catch (FileNotFoundException fnfe) { //we assume this will not happen
@@ -109,9 +109,9 @@ public class P2PTransientServer {
         } catch (IOException ioe) {
             byte[] buffer = new byte[CHUNK_SIZE];
             return buffer;
-        }      
-    } 
-    
+        }
+    }
+
 
     /**
      * Concatenates 2 byte[] into a single byte[]
@@ -126,5 +126,5 @@ public class P2PTransientServer {
         System.arraycopy(buffer2, 0, returnBuffer, buffer1.length, buffer2.length);
         return returnBuffer;
     }
-    
+
 }
