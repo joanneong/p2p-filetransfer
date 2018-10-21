@@ -1,11 +1,14 @@
 import java.util.HashMap;
 import java.util.List;
+import java.util.Set;
+
+import java.util.stream.Collectors;
 
 public class DirectoryServer {
 
     private HashMap<Chunk, List<Host>> firstTable;
     private HashMap<Host, List<Chunk>> secondTable;
-    
+
     /**
      * Constructor
      */
@@ -43,11 +46,24 @@ public class DirectoryServer {
     }
 
     private String getListReplyMessage() {
-        return "";
+        String listReplyMessage = Constant.REPLY + Constant.DELIMITER;
+
+        Set<Chunk> chunksSet = firstTable.keySet();
+        Set<String> filenames = chunksSet.stream()
+                .map(chunk -> chunk.getFilename())
+                .collect(Collectors.toSet());
+
+        for (String filename : filenames) {
+            listReplyMessage += filename;
+            listReplyMessage += Constant.DELIMITER;
+        }
+        listReplyMessage += Constant.DELIMITER;
+
+        return listReplyMessage;
     }
 
     private String getGoodbyeMessage() {
-        return "";
+        return Constant.GOODBYE + Constant.DELIMITER + Constant.DELIMITER;
     }
 
     /**
