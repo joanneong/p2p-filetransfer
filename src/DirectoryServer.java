@@ -1,3 +1,4 @@
+import java.util.ArrayList;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.io.IOException;
@@ -25,8 +26,9 @@ public class DirectoryServer {
         return Constant.ACK + Constant.DELIMITER + Constant.DELIMITER;
     }
 
-    private String getQueryReplyMessage(Chunk chunk) {
+    private String getQueryReplyMessage(String filename, int chunkNumber) {
 
+        Chunk chunk = new Chunk(filename, chunkNumber);
         String message = Constant.REPLY + Constant.DELIMITER;
 
         List<Host> listOfHosts = firstTable.get(chunk);
@@ -101,9 +103,9 @@ public class DirectoryServer {
 
             case Constant.QUERY:
 
-                String filename = parsedClientMsg[1];
-                int chunkNumber = Integer.parseInt(parsedClientMsg[2]);
-                return getQueryReplyMessage(filename, chunkNumber);
+                String filename2 = parsedClientMsg[1];
+                int chunkNumber2 = Integer.parseInt(parsedClientMsg[2]);
+                return getQueryReplyMessage(filename2, chunkNumber2);
 
             case Constant.LIST:
 
@@ -121,21 +123,20 @@ public class DirectoryServer {
     }
 
     private String getMsgFromClient(Socket client) {
+        String messageFromClient = "";
+
         try {
             BufferedReader scanner = new BufferedReader(new InputStreamReader(client.getInputStream()));
-
-            String messageFromClient = "";
             String nextLine = scanner.readLine();
 
             while (nextLine != null) {
                 messageFromClient += nextLine;
                 nextLine = scanner.readLine();
             }
-
-            return messageFromClient;
         } catch (Exception e) {
             System.err.println(e.getMessage());
         }
+        return messageFromClient;
     }
 
     private void handleClientSocket(Socket client) {
@@ -161,6 +162,10 @@ public class DirectoryServer {
         } catch (IOException ioe) {
             System.err.println(ioe.getMessage());
         }
+    }
+
+    private String[] parse(String message) {
+        return message.split(Constant.DELIMITER);
     }
 
     public static void main(String[] args) {
