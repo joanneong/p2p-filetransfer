@@ -98,8 +98,6 @@ public class DirectoryServer {
 
             if (hostsForChunk.isEmpty()) {
                 firstTable.remove(chunk);
-            } else {
-                firstTable.put(chunk, hostsForChunk);
             }
         }
 
