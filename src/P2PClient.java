@@ -28,9 +28,9 @@ public class P2PClient {
         return sc.nextLine();
     }
 
-    private String getQueryMessage(String fileName) throws IOException {
+    private String getQueryMessage(String fileName, int chunkNumber) {
 
-        String toServer = "QUERY\r\n" + fileName + "\r\n" + "1";
+        String toServer = "QUERY\r\n" + fileName + "\r\n" + chunkNumber;
         pw.println(toServer);
 
         return sc.nextLine();
@@ -40,7 +40,7 @@ public class P2PClient {
         return "Reply: file downloaded from peer.";
     }
 
-    private String getListMessage() throws IOException {
+    private String getListMessage() {
 
         String toServer = "LIST";
         pw.println(toServer);
@@ -102,13 +102,13 @@ public class P2PClient {
                 break;
             case "query":
                 fileName = scanner.next();
-                messageReceived = getQueryMessage(fileName);
+                int chunkNumber = 1;
+                messageReceived = getQueryMessage(fileName, chunkNumber);
                 System.out.println(messageReceived);
                 break;
             case "download":
                 fileName = scanner.next();
-                messageReceived = getQueryMessage(fileName);
-                messageReceived = getDownloadMessage(messageReceived);
+                messageReceived = getDownloadMessage(fileName);
                 System.out.println(messageReceived);
                 break;
             case "list":
