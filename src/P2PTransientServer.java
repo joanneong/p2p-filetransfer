@@ -1,12 +1,11 @@
-import java.net.*;
-import java.nio.ByteBuffer;
-import java.nio.file.*;
-import java.io.*;
-
 import java.io.BufferedReader;
+import java.io.DataOutputStream;
+import java.io.FileNotFoundException;
 import java.io.InputStreamReader;
-import java.util.*;
-
+import java.io.IOException;
+import java.io.RandomAccessFile;
+import java.net.ServerSocket;
+import java.net.Socket;
 
 public class P2PTransientServer {
 
@@ -16,14 +15,14 @@ public class P2PTransientServer {
     public static final String EXIT = "Exit";
 
     public static void main(String[] args) {
-        int port = PEER_SERVER_PORT; //fixed port number
+        int port = PEER_SERVER_PORT; // fixed port number
 
         P2PTransientServer serverInstance = new P2PTransientServer();
         serverInstance.start(port);
     }
 
     private void start(int port) {
-        //System.out.println("Starting server on port " + port);
+
         boolean flag = true;
 
         try{
@@ -41,7 +40,7 @@ public class P2PTransientServer {
 
     /**
      * Handles requests sent by a client
-     * @param  client. Socket that handles the client connection
+     * @param  client Socket that handles the client connection
      * @return a boolean that shows whether we want to close this server.
      */
     private boolean handleClientSocket(Socket client) {
@@ -54,7 +53,7 @@ public class P2PTransientServer {
             isr = new InputStreamReader(client.getInputStream());
             br = new BufferedReader(isr);
             fileName = br.readLine();
-            if (fileName.equals(EXIT)) { //we assume file name cannot be "Exit"
+            if (fileName.equals(EXIT)) { // we assume file name cannot be "Exit"
                 byte[] buffer = ACK.getBytes();
                 sendP2PResponse(client, buffer);
                 return false;
@@ -76,8 +75,8 @@ public class P2PTransientServer {
 
     /**
      * Sends a response back to the client
-     * @param  client. Socket that handles the client connection
-     * @param  response. The response to be sent to the client
+     * @param  client Socket that handles the client connection
+     * @param  response The response to be sent to the client
      */
     private void sendP2PResponse(Socket client, byte[] response) {
 	  try {
@@ -90,8 +89,8 @@ public class P2PTransientServer {
 
     /**
      * Form a response to a P2PRequest
-     * @param  fileName. The name of file being requested
-     * @param  chunkNum. The chunk number of the file
+     * @param  fileName The name of file being requested
+     * @param  chunkNum The chunk number of the file
      * @return a byte[] that contains the data to be sent to the client
      */
     private byte[] formP2PResponse(String fileName, int chunkNum) {
@@ -103,7 +102,7 @@ public class P2PTransientServer {
             file.read(buffer);
             file.close();
             return buffer;
-        } catch (FileNotFoundException fnfe) { //we assume this will not happen
+        } catch (FileNotFoundException fnfe) { // we assume this will not happen
             byte[] buffer = new byte[CHUNK_SIZE];
             return buffer;
         } catch (IOException ioe) {

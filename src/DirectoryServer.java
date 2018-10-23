@@ -24,20 +24,20 @@ public class DirectoryServer {
     }
 
     private String getAckMessage() {
-        return Constant.ACK + Constant.DELIMITER + Constant.DELIMITER;
+        return Constant.MESSAGE_ACK + Constant.MESSAGE_DELIMITER;
     }
 
     private String getQueryReplyMessage(String filename, int chunkNumber) {
 
         Chunk chunk = new Chunk(filename, chunkNumber);
-        String message = Constant.REPLY + Constant.DELIMITER;
+        String message = Constant.MESSAGE_REPLY + Constant.MESSAGE_DELIMITER;
 
         List<Host> listOfHosts = firstTable.get(chunk);
 
         if (listOfHosts == null || listOfHosts.isEmpty()) {
 
             // Chunk not exists
-            return message + Constant.CHUNK_NOT_EXIST + Constant.DELIMITER + Constant.DELIMITER;
+            return message + Constant.MESSAGE_CHUNK_NOT_EXIST + Constant.MESSAGE_DELIMITER;
 
         } else {
 
@@ -45,15 +45,14 @@ public class DirectoryServer {
 
             Host randomlySelectedHost = listOfHosts.get(randomNumber);
 
-            return message + randomlySelectedHost.getIPAddress() + Constant.DELIMITER
-                    + randomlySelectedHost.getPortNumber() + Constant.DELIMITER
-                    + Constant.DELIMITER;
+            return message + randomlySelectedHost.getIPAddress() + Constant.MESSAGE_DELIMITER
+                    + randomlySelectedHost.getPortNumber() + Constant.MESSAGE_DELIMITER;
         }
 
     }
 
     private String getListReplyMessage() {
-        String listReplyMessage = Constant.REPLY + Constant.DELIMITER;
+        String listReplyMessage = Constant.MESSAGE_REPLY + Constant.MESSAGE_DELIMITER;
 
         Set<Chunk> chunksSet = firstTable.keySet();
         Set<String> filenames = chunksSet.stream()
@@ -62,15 +61,15 @@ public class DirectoryServer {
 
         for (String filename : filenames) {
             listReplyMessage += filename;
-            listReplyMessage += Constant.DELIMITER;
+            listReplyMessage += Constant.MESSAGE_DELIMITER;
         }
-        listReplyMessage += Constant.DELIMITER;
+        listReplyMessage += Constant.MESSAGE_DELIMITER;
 
         return listReplyMessage;
     }
 
     private String getGoodbyeMessage() {
-        return Constant.GOODBYE + Constant.DELIMITER + Constant.DELIMITER;
+        return Constant.MESSAGE_GOODBYE + Constant.MESSAGE_DELIMITER;
     }
 
     /**
@@ -133,24 +132,24 @@ public class DirectoryServer {
         String type = parsedClientMsg[0];
 
         switch(type) {
-            case Constant.INFORM:
+            case Constant.COMMAND_INFORM:
 
                 String filename = parsedClientMsg[1];
                 int chunkNumber = Integer.parseInt(parsedClientMsg[2]);
                 handleInformMsg(client, filename, chunkNumber);
                 return getAckMessage();
 
-            case Constant.QUERY:
+            case Constant.COMMAND_QUERY:
 
                 String filename2 = parsedClientMsg[1];
                 int chunkNumber2 = Integer.parseInt(parsedClientMsg[2]);
                 return getQueryReplyMessage(filename2, chunkNumber2);
 
-            case Constant.LIST:
+            case Constant.COMMAND_LIST:
 
                 return getListReplyMessage();
 
-            case Constant.EXIT:
+            case Constant.COMMAND_EXIT:
 
                 handleExitMsg(client);
                 return getGoodbyeMessage();
@@ -205,7 +204,7 @@ public class DirectoryServer {
     }
 
     private String[] parse(String message) {
-        return message.split(Constant.DELIMITER);
+        return message.split(Constant.MESSAGE_DELIMITER);
     }
 
     public static void main(String[] args) {
