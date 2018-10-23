@@ -24,7 +24,7 @@ public class DirectoryServer {
     }
 
     private String getAckMessage() {
-        return Constant.ACK + Constant.DELIMITER + Constant.DELIMITER;
+        return Constant.ACK + Constant.DELIMITER;
     }
 
     private String getQueryReplyMessage(String filename, int chunkNumber) {
@@ -37,7 +37,7 @@ public class DirectoryServer {
         if (listOfHosts == null || listOfHosts.isEmpty()) {
 
             // Chunk not exists
-            return message + Constant.CHUNK_NOT_EXIST + Constant.DELIMITER + Constant.DELIMITER;
+            return message + Constant.CHUNK_NOT_EXIST + Constant.DELIMITER;
 
         } else {
 
@@ -46,8 +46,7 @@ public class DirectoryServer {
             Host randomlySelectedHost = listOfHosts.get(randomNumber);
 
             return message + randomlySelectedHost.getIPAddress() + Constant.DELIMITER
-                    + randomlySelectedHost.getPortNumber() + Constant.DELIMITER
-                    + Constant.DELIMITER;
+                    + randomlySelectedHost.getPortNumber() + Constant.DELIMITER;
         }
 
     }
@@ -70,7 +69,7 @@ public class DirectoryServer {
     }
 
     private String getGoodbyeMessage() {
-        return Constant.GOODBYE + Constant.DELIMITER + Constant.DELIMITER;
+        return Constant.GOODBYE + Constant.DELIMITER;
     }
 
     /**
