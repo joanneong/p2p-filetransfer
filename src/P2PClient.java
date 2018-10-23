@@ -26,29 +26,33 @@ public class P2PClient {
             chunkCount++;
         }
 
-        String toServer = "INFORM\r\n" + fileName + "\r\n" + chunkCount;
+        String toServer = Constant.COMMAND_INFORM + Constant.MESSAGE_DELIMITER
+                + fileName + Constant.MESSAGE_DELIMITER
+                + chunkCount + Constant.MESSAGE_DELIMITER;
         pw.println(toServer);
         pw.flush();
 
         messageReceived = sc.nextLine();
-        if (messageReceived.equals("ACK")) {
+        if (messageReceived.equals(Constant.MESSAGE_ACK)) {
             return "File " + fileName + " informed to directory server";
         } else {
-            return "Inform failed";
+            return Constant.ERROR_CLIENT_INFORM_FAILED;
         }
     }
 
     private String getQueryMessage(String fileName, int chunkNumber) {
 
-        String toServer = "QUERY\r\n" + fileName + "\r\n" + chunkNumber;
+        String toServer = Constant.COMMAND_QUERY + Constant.MESSAGE_DELIMITER
+                + fileName + Constant.MESSAGE_DELIMITER
+                + chunkNumber + Constant.MESSAGE_DELIMITER;
         pw.println(toServer);
         pw.flush();
 
         sc.nextLine();
         messageReceived = sc.nextLine();
 
-        if (messageReceived.equals("CHUNK NOT EXIST")) {
-            return "File queried does not exist";
+        if (messageReceived.equals(Constant.MESSAGE_CHUNK_NOT_EXIST)) {
+            return Constant.ERROR_FILE_NOT_EXIST;
         } else {
             String p2pServerIP = messageReceived;
             int p2pServerPort = Integer.parseInt(sc.nextLine());
@@ -67,7 +71,7 @@ public class P2PClient {
         while (true) {
             messageReceived = getQueryMessage(fileName, chunkNumber);
 
-            if (messageReceived.equals("File queried does not exist")) {
+            if (messageReceived.equals(Constant.ERROR_FILE_NOT_EXIST)) {
                 break;
             }
 
@@ -79,9 +83,8 @@ public class P2PClient {
                 }
             }
             String p2pServerIP = messageReceived.substring(i);
-            int p2pServerPort = 9019;
 
-            Socket socketToP2PServer = connectToServer(p2pServerIP, p2pServerPort);
+            Socket socketToP2PServer = connectToServer(p2pServerIP, Constant.P2P_SERVER_PORT);
 
             sendQueryToP2PServer(fileName, chunkNumber, socketToP2PServer);
 
@@ -99,17 +102,17 @@ public class P2PClient {
 
     private String getListMessage() {
 
-        String toServer = "LIST";
+        String toServer = Constant.COMMAND_LIST;
         pw.println(toServer);
         pw.flush();
 
         StringBuilder replyMessage = new StringBuilder();
-        replyMessage.append("File list:\r\n");
+        replyMessage.append("File list:").append(Constant.MESSAGE_DELIMITER);
 
         sc.nextLine();
         messageReceived = sc.nextLine();
         while (!messageReceived.equals("")) {
-            replyMessage.append(messageReceived).append("\r\n");
+            replyMessage.append(messageReceived).append(Constant.MESSAGE_DELIMITER);
             messageReceived = sc.nextLine();
         }
 
@@ -118,7 +121,7 @@ public class P2PClient {
 
     private String getExitMessage() throws IOException {
 
-        String toServer = "EXIT";
+        String toServer = Constant.COMMAND_EXIT;
         pw.println(toServer);
         pw.flush();
 
@@ -130,14 +133,14 @@ public class P2PClient {
     }
 
     private void sendExitToOwnServer() throws IOException {
-        Socket socketToOwnServer = connectToServer("localhost", 9019);
+        Socket socketToOwnServer = connectToServer("localhost", Constant.P2P_SERVER_PORT);
         PrintWriter writerToOwnServer = new PrintWriter(socketToOwnServer.getOutputStream(), true);
-        writerToOwnServer.println("EXIT");
+        writerToOwnServer.println(Constant.COMMAND_EXIT);
         writerToOwnServer.flush();
 
         Scanner scFromOwnServer = new Scanner(socketToOwnServer.getInputStream());
-        if (!scFromOwnServer.nextLine().equals("ACK")) {
-            System.out.println("Own host server is not closed!");
+        if (!scFromOwnServer.nextLine().equals(Constant.MESSAGE_ACK)) {
+            System.out.println(Constant.ERROR_OWN_SERVER_NOT_CLOSED);
         }
 
         scFromOwnServer.close();
@@ -159,7 +162,9 @@ public class P2PClient {
 
         PrintWriter writerToP2PServer = new PrintWriter(socketToP2PServer.getOutputStream(), true);
 
-        String toP2PServer = "QUERY\r\n" + fileName + "\r\n" + chunkNumber;
+        String toP2PServer = Constant.COMMAND_QUERY + Constant.MESSAGE_DELIMITER
+                + fileName + Constant.MESSAGE_DELIMITER
+                + chunkNumber + Constant.MESSAGE_DELIMITER;
         writerToP2PServer.println(toP2PServer);
         writerToP2PServer.flush();
     }
@@ -168,7 +173,7 @@ public class P2PClient {
 
         // Create a client socket and connect to the server
         clientSocket = connectToServer(serverIP, serverPort);
-        System.out.println("Connected to directory server: " + serverIP + " at port " + serverPort + ".");
+        System.out.println("Connected to directory server: " + serverIP + " at port " + serverPort);
 
         // Read user input from keyboard
         Scanner scanner = new Scanner(System.in);
@@ -181,37 +186,37 @@ public class P2PClient {
         String replyMessage;
 
         while (true) {
-            switch (fromClient.toLowerCase()) {
-            case "inform":
+            switch (fromClient.toUpperCase()) {
+            case Constant.COMMAND_INFORM:
                 fileName = scanner.next();
                 replyMessage = getInformMessage(fileName);
                 System.out.println(replyMessage);
                 break;
-            case "query":
+            case Constant.COMMAND_QUERY:
                 fileName = scanner.next();
                 int chunkNumber = 1;
                 replyMessage = getQueryMessage(fileName, chunkNumber);
                 System.out.println(replyMessage);
                 break;
-            case "download":
+            case Constant.COMMAND_DOWNLOAD:
                 fileName = scanner.next();
                 replyMessage = getDownloadMessage(fileName);
                 System.out.println(replyMessage);
                 break;
-            case "list":
+            case Constant.COMMAND_LIST:
                 replyMessage = getListMessage();
                 System.out.println(replyMessage);
                 break;
-            case "exit":
+            case Constant.COMMAND_EXIT:
                 replyMessage = getExitMessage();
                 System.out.println(replyMessage);
                 break;
             default:
-                System.out.println("Invalid command.");
+                System.out.println(Constant.ERROR_INVALID_COMMAND);
                 break;
             }
 
-            if (fromClient.toLowerCase().equals("exit")) {
+            if (fromClient.toUpperCase().equals(Constant.COMMAND_EXIT)) {
                 scanner.close();
                 sc.close();
 
