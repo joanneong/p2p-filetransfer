@@ -4,9 +4,6 @@ import java.util.*;
 
 public class P2PClient {
 
-    private BufferedReader br;
-    private char[] buffer;
-
     Socket clientSocket;
 
     PrintWriter pw;
@@ -14,8 +11,8 @@ public class P2PClient {
 
     private String getInformMessage(String fileName) throws IOException {
 
-        br = new BufferedReader(new FileReader(fileName));
-        buffer = new char[1024];
+        BufferedReader br = new BufferedReader(new FileReader(fileName));
+        char[] buffer = new char[1024];
 
         int chunkCount = 0;
         while (br.read(buffer) != 0) {
@@ -36,8 +33,36 @@ public class P2PClient {
         return sc.nextLine();
     }
 
-    private String getDownloadMessage(String hostList) {
-        return "Reply: file downloaded from peer.";
+    private String getDownloadMessage(String fileName) throws IOException {
+
+        FileOutputStream fos = new FileOutputStream(fileName);
+        BufferedOutputStream bos = new BufferedOutputStream(fos);
+
+        int chunkNumber = 1;
+
+        while (true) {
+            String messageReceived = getQueryMessage(fileName, chunkNumber);
+
+            if (messageReceived.contains("CHUNK NOT EXIST")) {
+                break;
+            }
+
+            String p2pServerIP = messageReceived;
+            int p2pServerPort = 9019;
+            Socket socketToP2PServer = connectToServer(p2pServerIP, p2pServerPort);
+
+            sendQueryToP2PServer(fileName, chunkNumber, socketToP2PServer);
+
+            receiveDataFromP2PServer(bos, socketToP2PServer);
+
+            socketToP2PServer.close();
+
+            chunkNumber++;
+        }
+
+        bos.close();
+
+        return "Reply: file " + fileName + " downloaded from peer server.";
     }
 
     private String getListMessage() {
@@ -60,7 +85,7 @@ public class P2PClient {
     }
 
     private void sendExitToOwnServer() throws IOException {
-        Socket socketToOwnServer = new Socket("localhost", 9019);
+        Socket socketToOwnServer = connectToServer("localhost", 9019);
         PrintWriter writerToOwnServer = new PrintWriter(socketToOwnServer.getOutputStream(), true);
         writerToOwnServer.println("EXIT");
 
@@ -73,14 +98,29 @@ public class P2PClient {
         socketToOwnServer.close();
     }
 
-    private void send(String messageToSend, String IPAddress, int port) {
+    private Socket connectToServer(String p2pServerIP, int p2pServerPort) throws IOException {
+        return new Socket(p2pServerIP, p2pServerPort);
+    }
 
+    private void receiveDataFromP2PServer(BufferedOutputStream bos, Socket socketToP2PServer) throws IOException {
+        byte[] buffer = new byte[1024];
+        socketToP2PServer.getInputStream().read(buffer);
+        bos.write(buffer);
+        bos.flush();
+    }
+
+    private void sendQueryToP2PServer(String fileName, int chunkNumber, Socket socketToP2PServer) throws IOException {
+
+        PrintWriter writerToP2PServer = new PrintWriter(socketToP2PServer.getOutputStream(), true);
+
+        String toP2PServer = "QUERY\r\n" + fileName + "\r\n" + chunkNumber;
+        writerToP2PServer.println(toP2PServer);
     }
 
     private void start(String serverIP, int serverPort) throws IOException {
 
         // Create a client socket and connect to the server
-        clientSocket = new Socket(serverIP, serverPort);
+        clientSocket = connectToServer(serverIP, serverPort);
         System.out.println("Connected to directory server: " + serverIP + " at port " + serverPort + ".");
 
         // Read user input from keyboard
