@@ -59,10 +59,15 @@ public class DirectoryServer {
                 .map(chunk -> chunk.getFilename())
                 .collect(Collectors.toSet());
 
-        for (String filename : filenames) {
-            listReplyMessage += filename;
-            listReplyMessage += Constant.MESSAGE_DELIMITER;
+        if (filenames.isEmpty()) {
+            listReplyMessage += "File list is empty";
+        } else {
+            for (String filename : filenames) {
+                listReplyMessage += filename;
+                listReplyMessage += Constant.MESSAGE_DELIMITER;
+            }
         }
+        
         listReplyMessage += Constant.MESSAGE_DELIMITER;
 
         return listReplyMessage;
@@ -79,6 +84,12 @@ public class DirectoryServer {
         try {
             PrintWriter writer = new PrintWriter(client.getOutputStream(), true);
             writer.println(messageToSend);
+
+            if (messageToSend.contains(Constant.MESSAGE_GOODBYE)) {
+                System.out.println("Closing the client socket...");
+                client.close();
+                System.out.println("Client is closed: " + client.isClosed());
+            }
         } catch (IOException ioe) {
             System.err.println(ioe.getMessage());
         }
@@ -114,22 +125,28 @@ public class DirectoryServer {
         List<Chunk> clientChunks = secondTable.get(clientHost);
 
         // Remove client information from the first table
-        for (Chunk chunk : clientChunks) {
-            List<Host> hostsForChunk = firstTable.get(chunk);
-            hostsForChunk.remove(clientHost);
+        if (clientChunks != null) {
+            for (Chunk chunk : clientChunks) {
+                List<Host> hostsForChunk = firstTable.get(chunk);
 
-            if (hostsForChunk.isEmpty()) {
-                firstTable.remove(chunk);
+                if (hostsForChunk == null) {
+                    continue;
+                }
+                hostsForChunk.remove(clientHost);
+
+                if (hostsForChunk.isEmpty()) {
+                    firstTable.remove(chunk);
+                }
+                // Remove client information from the second table
+                secondTable.remove(clientHost);
             }
         }
-
-        // Remove client information from the second table
-        secondTable.remove(clientHost);
     }
 
     private String handleClientMsg(Socket client, String[] parsedClientMsg) {
 
         String type = parsedClientMsg[0];
+        System.out.println("Client message has type: " + type);
 
         switch(type) {
             case Constant.COMMAND_INFORM:
@@ -167,10 +184,16 @@ public class DirectoryServer {
             BufferedReader scanner = new BufferedReader(new InputStreamReader(client.getInputStream()));
             String nextLine = scanner.readLine();
 
-            // TODO: CHECK IF THIS READ WILL TERMINATE
             while (nextLine != null) {
+                System.out.println("Current line read: " + nextLine);
                 messageFromClient += nextLine;
-                nextLine = scanner.readLine();
+                messageFromClient += Constant.MESSAGE_DELIMITER;
+
+                if (scanner.ready()) {
+                    nextLine = scanner.readLine();
+                } else {
+                    nextLine = null;
+                }
             }
         } catch (Exception e) {
             System.err.println(e.getMessage());
@@ -181,22 +204,29 @@ public class DirectoryServer {
     private void handleClientSocket(Socket client) {
             String messageFromClient = getMsgFromClient(client);
 
+            System.out.println("Parsing client message...");
             String[] parsedClientMsg = parse(messageFromClient);
+            
+            System.out.println("Preparing directory server reply...");
             String reply = handleClientMsg(client, parsedClientMsg);
+
+            System.out.println("Sending directory server reply...");
             send(client, reply);
     }
 
     private void start() {
         try {
             ServerSocket serverSocket = new ServerSocket(Constant.DIR_SERVER_PORT);
+            System.out.println("The directory server is up and running...");
 
             while(true) {
-                System.out.println("The directory server is up and running...");
-
+                System.out.println("Waiting for new client connection...");
                 Socket clientSocket = serverSocket.accept();
                 System.out.println("New connection request from a client!");
 
-                handleClientSocket(clientSocket);
+                while (!clientSocket.isClosed()) {
+                    handleClientSocket(clientSocket);
+                }
             }
         } catch (IOException ioe) {
             System.err.println(ioe.getMessage());
