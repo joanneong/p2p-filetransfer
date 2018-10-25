@@ -59,10 +59,15 @@ public class DirectoryServer {
                 .map(chunk -> chunk.getFilename())
                 .collect(Collectors.toSet());
 
-        for (String filename : filenames) {
-            listReplyMessage += filename;
-            listReplyMessage += Constant.MESSAGE_DELIMITER;
+        if (filenames.isEmpty()) {
+            listReplyMessage += "File list is empty";
+        } else {
+            for (String filename : filenames) {
+                listReplyMessage += filename;
+                listReplyMessage += Constant.MESSAGE_DELIMITER;
+            }
         }
+        
         listReplyMessage += Constant.MESSAGE_DELIMITER;
 
         return listReplyMessage;
