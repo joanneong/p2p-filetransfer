@@ -163,7 +163,7 @@ public class P2PClient {
         writerToP2PServer.flush();
     }
 
-    private int getFileChunkNumber(String fileName) throws IOException {
+    private int getNumberOfChunks(String fileName) throws IOException {
 
         BufferedReader br = new BufferedReader(new FileReader(fileName));
         char[] buffer = new char[1024];
@@ -196,10 +196,19 @@ public class P2PClient {
             switch (fromClient.toUpperCase()) {
             case Constant.COMMAND_INFORM:
                 fileName = scanner.next();
-                chunkNumber = getFileChunkNumber(fileName);
+                chunkNumber = getNumberOfChunks(fileName);
+
+                boolean isInformSuccess = true;
                 for (int i = 1; i <= chunkNumber; i++) {
                     replyMessage = getInformMessage(fileName, i);
-                    System.out.println(replyMessage);
+                    if (replyMessage.equals(Constant.ERROR_CLIENT_INFORM_FAILED)) {
+                        System.out.println(replyMessage);
+                        isInformSuccess = false;
+                        break;
+                    }
+                }
+                if (isInformSuccess) {
+                    System.out.println("File " + fileName + " informed to directory server");
                 }
                 break;
             case Constant.COMMAND_QUERY:
