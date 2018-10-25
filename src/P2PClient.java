@@ -16,25 +16,17 @@ public class P2PClient {
 
     String messageReceived;
 
-    private String getInformMessage(String fileName) throws IOException {
-
-        BufferedReader br = new BufferedReader(new FileReader(fileName));
-        char[] buffer = new char[1024];
-
-        int chunkCount = 0;
-        while (br.read(buffer) != 0) {
-            chunkCount++;
-        }
+    private String getInformMessage(String fileName, int chunkNumber) {
 
         String toServer = Constant.COMMAND_INFORM + Constant.MESSAGE_DELIMITER
                 + fileName + Constant.MESSAGE_DELIMITER
-                + chunkCount + Constant.MESSAGE_DELIMITER;
+                + chunkNumber + Constant.MESSAGE_DELIMITER;
         pw.println(toServer);
         pw.flush();
 
         messageReceived = sc.nextLine();
         if (messageReceived.equals(Constant.MESSAGE_ACK)) {
-            return "File " + fileName + " informed to directory server";
+            return "File " + fileName + "chunk " + chunkNumber + " informed to directory server";
         } else {
             return Constant.ERROR_CLIENT_INFORM_FAILED;
         }
@@ -91,6 +83,8 @@ public class P2PClient {
             receiveDataFromP2PServer(bos, socketToP2PServer);
 
             socketToP2PServer.close();
+
+            getInformMessage(fileName, chunkNumber);
 
             chunkNumber++;
         }
@@ -169,6 +163,18 @@ public class P2PClient {
         writerToP2PServer.flush();
     }
 
+    private int getFileChunkNumber(String fileName) throws IOException {
+
+        BufferedReader br = new BufferedReader(new FileReader(fileName));
+        char[] buffer = new char[1024];
+
+        int chunkCount = 0;
+        while (br.read(buffer) != 0) {
+            chunkCount++;
+        }
+        return chunkCount;
+    }
+
     private void start(String serverIP, int serverPort) throws IOException {
 
         // Create a client socket and connect to the server
@@ -184,17 +190,21 @@ public class P2PClient {
 
         String fileName;
         String replyMessage;
+        int chunkNumber;
 
         while (true) {
             switch (fromClient.toUpperCase()) {
             case Constant.COMMAND_INFORM:
                 fileName = scanner.next();
-                replyMessage = getInformMessage(fileName);
-                System.out.println(replyMessage);
+                chunkNumber = getFileChunkNumber(fileName);
+                for (int i = 1; i <= chunkNumber; i++) {
+                    replyMessage = getInformMessage(fileName, i);
+                    System.out.println(replyMessage);
+                }
                 break;
             case Constant.COMMAND_QUERY:
                 fileName = scanner.next();
-                int chunkNumber = 1;
+                chunkNumber = 1;
                 replyMessage = getQueryMessage(fileName, chunkNumber);
                 System.out.println(replyMessage);
                 break;
