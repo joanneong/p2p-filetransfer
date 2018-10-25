@@ -102,6 +102,7 @@ public class DirectoryServer {
             availableHosts = new ArrayList<>();
         }
         availableHosts.add(host);
+        firstTable.put(chunk, availableHosts);
 
         // Add to the second table
         List<Chunk> chunksOfTheHost = secondTable.get(host);
@@ -109,6 +110,7 @@ public class DirectoryServer {
             chunksOfTheHost = new ArrayList<>();
         }
         chunksOfTheHost.add(chunk);
+        secondTable.put(host, chunksOfTheHost);
     }
 
     private void handleExitMsg(Socket client) {
