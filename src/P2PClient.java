@@ -44,7 +44,9 @@ public class P2PClient {
         pw.flush();
 
         sc.nextLine();
+        sc.nextLine();
         messageReceived = sc.nextLine();
+        sc.nextLine();
 
         if (messageReceived.equals(Constant.MESSAGE_CHUNK_NOT_EXIST)) {
             return Constant.ERROR_FILE_NOT_EXIST;
@@ -107,8 +109,10 @@ public class P2PClient {
         replyMessage.append("File list:").append(Constant.MESSAGE_DELIMITER);
 
         sc.nextLine();
+        sc.nextLine();
         messageReceived = sc.nextLine();
         while (!messageReceived.equals("")) {
+            sc.nextLine();
             replyMessage.append(messageReceived).append(Constant.MESSAGE_DELIMITER);
             messageReceived = sc.nextLine();
         }
@@ -123,6 +127,7 @@ public class P2PClient {
         pw.flush();
 
         messageReceived =  sc.nextLine();
+        sc.nextLine();
 
         sendExitToOwnServer();
 
