@@ -9,13 +9,8 @@ import java.net.Socket;
 
 public class P2PTransientServer {
 
-    public static final int PEER_SERVER_PORT = 9019;
-    public static final int CHUNK_SIZE = 1024;
-    public static final String ACK = "ACK";
-    public static final String EXIT = "Exit";
-
     public static void main(String[] args) {
-        int port = PEER_SERVER_PORT; // fixed port number
+        int port = Constant.P2P_SERVER_PORT; // fixed port number
 
         P2PTransientServer serverInstance = new P2PTransientServer();
         serverInstance.start(port);
@@ -28,7 +23,7 @@ public class P2PTransientServer {
         try{
             ServerSocket welcomeSocket = new ServerSocket (port);
 
-            while (true) {
+            while (flag) {
                 Socket connectionSocket = welcomeSocket.accept();
                 flag = handleClientSocket(connectionSocket);
             }
@@ -53,8 +48,8 @@ public class P2PTransientServer {
             isr = new InputStreamReader(client.getInputStream());
             br = new BufferedReader(isr);
             fileName = br.readLine();
-            if (fileName.equals(EXIT)) { // we assume file name cannot be "Exit"
-                byte[] buffer = ACK.getBytes();
+            if (fileName.equals(Constant.COMMAND_EXIT)) { // we assume file name cannot be "EXIT"
+                byte[] buffer = Constant.MESSAGE_ACK.getBytes();
                 sendP2PResponse(client, buffer);
                 return false;
             }
@@ -97,16 +92,16 @@ public class P2PTransientServer {
         try{
             String directoryPath = this.getClass().getResource("resource/").getPath();
             RandomAccessFile file = new RandomAccessFile(directoryPath + fileName, "r");
-            file.seek(CHUNK_SIZE*(chunkNum-1));
-            byte[] buffer = new byte[CHUNK_SIZE];
+            file.seek(Constant.CHUNK_SIZE*(chunkNum-1));
+            byte[] buffer = new byte[Constant.CHUNK_SIZE];
             file.read(buffer);
             file.close();
             return buffer;
         } catch (FileNotFoundException fnfe) { // we assume this will not happen
-            byte[] buffer = new byte[CHUNK_SIZE];
+            byte[] buffer = new byte[Constant.CHUNK_SIZE];
             return buffer;
         } catch (IOException ioe) {
-            byte[] buffer = new byte[CHUNK_SIZE];
+            byte[] buffer = new byte[Constant.CHUNK_SIZE];
             return buffer;
         }
     }
