@@ -1,5 +1,6 @@
 import java.io.BufferedReader;
 import java.io.DataOutputStream;
+import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.InputStreamReader;
 import java.io.IOException;
@@ -10,10 +11,13 @@ import java.net.Socket;
 public class P2PTransientServer {
 
     public static void main(String[] args) {
+        new File(Constant.DEFAULT_DIRECTORY).mkdirs();
+
         int port = Constant.P2P_SERVER_PORT; // fixed port number
 
         P2PTransientServer serverInstance = new P2PTransientServer();
         serverInstance.start(port);
+        System.out.println("P2P transient server closed. Goodbye!");
     }
 
     private void start(int port) {
@@ -22,6 +26,7 @@ public class P2PTransientServer {
 
         try{
             ServerSocket welcomeSocket = new ServerSocket (port);
+            System.out.println("P2P transient server running on port 9019...");
 
             while (flag) {
                 Socket connectionSocket = welcomeSocket.accept();
@@ -90,7 +95,7 @@ public class P2PTransientServer {
      */
     private byte[] formP2PResponse(String fileName, int chunkNum) {
         try{
-            String directoryPath = this.getClass().getResource("resource/").getPath();
+            String directoryPath = this.getClass().getResource(Constant.DEFAULT_DIRECTORY).getPath();
             RandomAccessFile file = new RandomAccessFile(directoryPath + fileName, "r");
             file.seek(Constant.CHUNK_SIZE*(chunkNum-1));
             byte[] buffer = new byte[Constant.CHUNK_SIZE];
