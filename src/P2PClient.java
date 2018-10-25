@@ -25,6 +25,9 @@ public class P2PClient {
         pw.flush();
 
         messageReceived = sc.nextLine();
+        System.out.println("Message from directory server: " + messageReceived);
+        sc.nextLine();
+
         if (messageReceived.equals(Constant.MESSAGE_ACK)) {
             return "File " + fileName + "chunk " + chunkNumber + " informed to directory server";
         } else {
@@ -169,7 +172,8 @@ public class P2PClient {
         char[] buffer = new char[1024];
 
         int chunkCount = 0;
-        while (br.read(buffer) != 0) {
+        while (br.read(buffer) != -1) {
+            System.out.println("Is counting...");
             chunkCount++;
         }
         return chunkCount;
@@ -196,7 +200,9 @@ public class P2PClient {
             switch (fromClient.toUpperCase()) {
             case Constant.COMMAND_INFORM:
                 fileName = scanner.next();
+                System.out.println("File name: " + fileName);
                 chunkNumber = getNumberOfChunks(fileName);
+                System.out.println("Number of chunks: " + chunkNumber);
 
                 boolean isInformSuccess = true;
                 for (int i = 1; i <= chunkNumber; i++) {
