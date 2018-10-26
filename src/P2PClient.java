@@ -48,7 +48,7 @@ public class P2PClient {
         sc.nextLine();
 
         if (messageReceived.equals(Constant.MESSAGE_CHUNK_NOT_EXIST)) {
-            return Constant.ERROR_FILE_NOT_EXIST;
+            return Constant.ERROR_QUERY_FILE_NOT_EXIST;
         } else {
             String p2pServerIP = messageReceived;
 
@@ -67,7 +67,7 @@ public class P2PClient {
         while (true) {
             messageReceived = getQueryMessage(fileName, chunkNumber);
 
-            if (messageReceived.equals(Constant.ERROR_FILE_NOT_EXIST)) {
+            if (messageReceived.equals(Constant.ERROR_QUERY_FILE_NOT_EXIST)) {
                 break;
             }
 
@@ -178,7 +178,12 @@ public class P2PClient {
 
     private int getNumberOfChunks(String fileName) throws IOException {
 
-        BufferedReader br = new BufferedReader(new FileReader(Constant.DEFAULT_DIRECTORY + fileName));
+        BufferedReader br;
+        try {
+            br = new BufferedReader(new FileReader(Constant.DEFAULT_DIRECTORY + fileName));
+        } catch (IOException e) {
+            return -1;
+        }
 
         char[] buffer = new char[1024];
 
@@ -217,6 +222,11 @@ public class P2PClient {
                 System.out.println("File name: " + fileName);
                 chunkNumber = getNumberOfChunks(fileName);
                 System.out.println("Number of chunks: " + chunkNumber);
+
+                if (chunkNumber == -1) {
+                    System.out.println(Constant.ERROR_INFORM_FILE_NOT_EXIST);
+                    break;
+                }
 
                 boolean isInformSuccess = true;
                 for (int i = 1; i <= chunkNumber; i++) {

@@ -19,7 +19,8 @@ public class Constant {
     public static final String MESSAGE_GOODBYE = "GOODBYE";
 
     public static final String ERROR_CLIENT_INFORM_FAILED = "Inform failed";
-    public static final String ERROR_FILE_NOT_EXIST = "File queried does not exist";
+    public static final String ERROR_INFORM_FILE_NOT_EXIST = "File informed does not exist";
+    public static final String ERROR_QUERY_FILE_NOT_EXIST = "File queried does not exist";
     public static final String ERROR_INVALID_COMMAND = "Invalid command";
     public static final String ERROR_OWN_SERVER_NOT_CLOSED = "Own host server is not closed!";
 }
