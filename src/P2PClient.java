@@ -44,7 +44,6 @@ public class P2PClient {
         pw.flush();
 
         sc.nextLine();
-        sc.nextLine();
         messageReceived = sc.nextLine();
         sc.nextLine();
 
@@ -110,13 +109,19 @@ public class P2PClient {
         replyMessage.append("File list:").append(Constant.MESSAGE_DELIMITER);
 
         sc.nextLine();
-        sc.nextLine();
         messageReceived = sc.nextLine();
-        while (!messageReceived.equals("")) {
-            sc.nextLine();
-            replyMessage.append(messageReceived).append(Constant.MESSAGE_DELIMITER);
-            messageReceived = sc.nextLine();
+
+        if (messageReceived.equals(Constant.MESSAGE_FILE_LIST_EMPTY)) {
+            replyMessage.append("There is no file available").append(Constant.MESSAGE_DELIMITER);
+        } else {
+            int fileCount = Integer.parseInt(messageReceived);
+            for (int i = 0; i < fileCount; i++) {
+                messageReceived = sc.nextLine();
+                replyMessage.append(messageReceived).append(Constant.MESSAGE_DELIMITER);
+            }
         }
+
+        sc.nextLine();
 
         return replyMessage.toString();
     }

@@ -15,6 +15,7 @@ public class Constant {
     public static final String MESSAGE_ACK = "ACK";
     public static final String MESSAGE_REPLY = "REPLY";
     public static final String MESSAGE_CHUNK_NOT_EXIST = "CHUNK NOT EXIST";
+    public static final String MESSAGE_FILE_LIST_EMPTY = "FILE LIST EMPTY";
     public static final String MESSAGE_GOODBYE = "GOODBYE";
 
     public static final String ERROR_CLIENT_INFORM_FAILED = "Inform failed";
