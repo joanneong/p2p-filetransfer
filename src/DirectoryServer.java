@@ -60,8 +60,10 @@ public class DirectoryServer {
                 .collect(Collectors.toSet());
 
         if (filenames.isEmpty()) {
-            listReplyMessage += "File list is empty" + Constant.MESSAGE_DELIMITER;
+            listReplyMessage += Constant.MESSAGE_FILE_LIST_EMPTY + Constant.MESSAGE_DELIMITER;
         } else {
+            listReplyMessage += filenames.size();
+            listReplyMessage += Constant.MESSAGE_DELIMITER;
             for (String filename : filenames) {
                 listReplyMessage += filename;
                 listReplyMessage += Constant.MESSAGE_DELIMITER;

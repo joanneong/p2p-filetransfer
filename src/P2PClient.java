@@ -44,7 +44,6 @@ public class P2PClient {
         pw.flush();
 
         sc.nextLine();
-        sc.nextLine();
         messageReceived = sc.nextLine();
         sc.nextLine();
 
@@ -61,6 +60,7 @@ public class P2PClient {
     private String getDownloadMessage(String fileName) throws IOException {
 
         FileOutputStream fos = new FileOutputStream(Constant.DEFAULT_DIRECTORY + fileName);
+
         BufferedOutputStream bos = new BufferedOutputStream(fos);
 
         int chunkNumber = 1;
@@ -79,6 +79,7 @@ public class P2PClient {
                     break;
                 }
             }
+            String p2pServerIP = messageReceived.substring(i);
 
             Socket socketToP2PServer = connectToServer(p2pServerIP, Constant.P2P_SERVER_PORT);
 
@@ -108,13 +109,19 @@ public class P2PClient {
         replyMessage.append("File list:").append(Constant.MESSAGE_DELIMITER);
 
         sc.nextLine();
-        sc.nextLine();
         messageReceived = sc.nextLine();
-        while (!messageReceived.equals("")) {
-            sc.nextLine();
-            replyMessage.append(messageReceived).append(Constant.MESSAGE_DELIMITER);
-            messageReceived = sc.nextLine();
+
+        if (messageReceived.equals(Constant.MESSAGE_FILE_LIST_EMPTY)) {
+            replyMessage.append("There is no file available").append(Constant.MESSAGE_DELIMITER);
+        } else {
+            int fileCount = Integer.parseInt(messageReceived);
+            for (int i = 0; i < fileCount; i++) {
+                messageReceived = sc.nextLine();
+                replyMessage.append(messageReceived).append(Constant.MESSAGE_DELIMITER);
+            }
         }
+
+        sc.nextLine();
 
         return replyMessage.toString();
     }
@@ -173,6 +180,7 @@ public class P2PClient {
     private int getNumberOfChunks(String fileName) throws IOException {
 
         BufferedReader br = new BufferedReader(new FileReader(Constant.DEFAULT_DIRECTORY + fileName));
+
         char[] buffer = new char[1024];
 
         int chunkCount = 0;
