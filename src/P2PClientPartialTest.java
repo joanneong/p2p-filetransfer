@@ -6,6 +6,7 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.Socket;
+import java.util.Arrays;
 import java.util.Scanner;
 
 public class P2PClientPartialTest {
@@ -58,8 +59,15 @@ public class P2PClientPartialTest {
 
     private void receiveDataFromP2PServer(BufferedOutputStream bos, Socket socketToP2PServer) throws IOException {
         byte[] buffer = new byte[1024];
-        socketToP2PServer.getInputStream().read(buffer);
-        bos.write(buffer);
+        int bytesRead = socketToP2PServer.getInputStream().read(buffer);
+
+        if (bytesRead == Constant.CHUNK_SIZE) {
+            bos.write(buffer);
+        } else { //it is the case for the last packet
+            byte[] subBuffer = Arrays.copyOfRange(buffer, 0, bytesRead);
+            bos.write(subBuffer);
+        }
+
         bos.flush();
     }
 
