@@ -74,7 +74,7 @@ public class P2PClient {
             int i;
             for (i = 0; i < messageReceived.length() - 10; i++) {
                 if (messageReceived.substring(i, i + 10).equals("P2P server")) {
-                    i = i + 11;
+                    i = i + 12;
                     break;
                 }
             }
@@ -95,7 +95,7 @@ public class P2PClient {
 
         bos.close();
 
-        return "File " + fileName + " downloaded from peer server";
+        return "File " + fileName + " downloaded from peer server" + Constant.MESSAGE_DELIMITER;
     }
 
     private String getListMessage() {
