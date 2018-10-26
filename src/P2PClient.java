@@ -95,6 +95,9 @@ public class P2PClient {
 
         bos.close();
 
+        if (chunkNumber == 1) {
+            return Constant.ERROR_DOWNLOAD_FILE_NOT_EXIST;
+        }
         return "File " + fileName + " downloaded from peer server" + Constant.MESSAGE_DELIMITER;
     }
 

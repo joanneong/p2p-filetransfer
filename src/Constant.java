@@ -21,6 +21,7 @@ public class Constant {
     public static final String ERROR_CLIENT_INFORM_FAILED = "Inform failed";
     public static final String ERROR_INFORM_FILE_NOT_EXIST = "File informed does not exist" + MESSAGE_DELIMITER;
     public static final String ERROR_QUERY_FILE_NOT_EXIST = "File queried does not exist" + MESSAGE_DELIMITER;
+    public static final String ERROR_DOWNLOAD_FILE_NOT_EXIST = "File requested does not exist" + MESSAGE_DELIMITER;
     public static final String ERROR_INVALID_COMMAND = "Invalid command" + MESSAGE_DELIMITER;
     public static final String ERROR_OWN_SERVER_NOT_CLOSED = "Own host server is not closed!" + MESSAGE_DELIMITER;
 }
