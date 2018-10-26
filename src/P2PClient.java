@@ -60,7 +60,7 @@ public class P2PClient {
 
     private String getDownloadMessage(String fileName) throws IOException {
 
-        FileOutputStream fos = new FileOutputStream(fileName);
+        FileOutputStream fos = new FileOutputStream(Constant.PATH_RESOURCE + fileName);
         BufferedOutputStream bos = new BufferedOutputStream(fos);
 
         int chunkNumber = 1;
@@ -173,7 +173,7 @@ public class P2PClient {
 
     private int getNumberOfChunks(String fileName) throws IOException {
 
-        BufferedReader br = new BufferedReader(new FileReader(fileName));
+        BufferedReader br = new BufferedReader(new FileReader(Constant.PATH_RESOURCE + fileName));
         char[] buffer = new char[1024];
 
         int chunkCount = 0;

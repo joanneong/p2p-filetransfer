@@ -90,7 +90,7 @@ public class P2PTransientServer {
      */
     private byte[] formP2PResponse(String fileName, int chunkNum) {
         try{
-            String directoryPath = this.getClass().getResource("resource/").getPath();
+            String directoryPath = this.getClass().getResource(Constant.PATH_RESOURCE).getPath();
             RandomAccessFile file = new RandomAccessFile(directoryPath + fileName, "r");
             file.seek(Constant.CHUNK_SIZE*(chunkNum-1));
             byte[] buffer = new byte[Constant.CHUNK_SIZE];
