@@ -52,7 +52,7 @@ public class P2PClient {
         } else {
             String p2pServerIP = messageReceived;
 
-            return "File " + fileName + " found at port " + Constant.P2P_SERVER_PORT + " of P2P server " + p2pServerIP;
+            return "File " + fileName + " found at port " + Constant.P2P_SERVER_PORT + " of P2P server " + p2pServerIP + Constant.MESSAGE_DELIMITER;
         }
     }
 
@@ -136,7 +136,7 @@ public class P2PClient {
 
         sendExitToOwnServer();
 
-        return messageReceived;
+        return messageReceived + Constant.MESSAGE_DELIMITER;
     }
 
     private void sendExitToOwnServer() throws IOException {
@@ -238,7 +238,7 @@ public class P2PClient {
                     }
                 }
                 if (isInformSuccess) {
-                    System.out.println("File " + fileName + " informed to directory server");
+                    System.out.println("File " + fileName + " informed to directory server" + Constant.MESSAGE_DELIMITER);
                 }
                 break;
             case Constant.COMMAND_QUERY:
