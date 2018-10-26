@@ -216,14 +216,16 @@ public class DirectoryServer implements Runnable {
     private void handleClientSocket(Socket client) {
             String messageFromClient = getMsgFromClient(client);
 
-            System.out.println("Parsing client message...");
-            String[] parsedClientMsg = parse(messageFromClient);
-            
-            System.out.println("Preparing directory server reply...");
-            String reply = handleClientMsg(client, parsedClientMsg);
+            if (!messageFromClient.isEmpty()) {
+                System.out.println("Parsing client message...");
+                String[] parsedClientMsg = parse(messageFromClient);
+                
+                System.out.println("Preparing directory server reply...");
+                String reply = handleClientMsg(client, parsedClientMsg);
 
-            System.out.println("Sending directory server reply...");
-            send(client, reply);
+                System.out.println("Sending directory server reply...");
+                send(client, reply);
+            }
     }
 
     private void startWelcomeSocket() {
