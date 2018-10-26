@@ -214,24 +214,24 @@ public class DirectoryServer implements Runnable {
     }
 
     private void handleClientSocket(Socket client) {
-            String messageFromClient = getMsgFromClient(client);
+        String messageFromClient = getMsgFromClient(client);
 
-            if (!messageFromClient.isEmpty()) {
-                System.out.println("Parsing client message...");
-                String[] parsedClientMsg = parse(messageFromClient);
-                
-                System.out.println("Preparing directory server reply...");
-                String reply = handleClientMsg(client, parsedClientMsg);
+        if (!messageFromClient.isEmpty()) {
+            System.out.println("Parsing client message...");
+            String[] parsedClientMsg = parse(messageFromClient);
+            
+            System.out.println("Preparing directory server reply...");
+            String reply = handleClientMsg(client, parsedClientMsg);
 
-                System.out.println("Sending directory server reply...");
-                send(client, reply);
-            }
+            System.out.println("Sending directory server reply...");
+            send(client, reply);
+        }
     }
 
     private void startWelcomeSocket() {
         try {
             ServerSocket serverSocket = new ServerSocket(Constant.DIR_SERVER_PORT);
-            System.out.println("The welcome socket directory server is up and running...");
+            System.out.println("The directory server is up and running...");
 
             while(true) {
                 System.out.println("Waiting for new client connection...");
@@ -248,7 +248,7 @@ public class DirectoryServer implements Runnable {
 
     @Override
     public void run() {
-        System.out.println("New thread created to entertain the client...");
+        System.out.println("New thread created to entertain the client...\n");
         while (!acceptedClientSocket.isClosed()) {
             handleClientSocket(acceptedClientSocket);
         }
