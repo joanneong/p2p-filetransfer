@@ -79,7 +79,7 @@ public class P2PClient {
                     break;
                 }
             }
-            String p2pServerIP = messageReceived.substring(i, messageReceived.length() - 1);
+            String p2pServerIP = messageReceived.substring(i, messageReceived.length() - 2);
 
             Socket socketToP2PServer = connectToServer(p2pServerIP, Constant.P2P_SERVER_PORT);
 
