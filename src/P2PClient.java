@@ -252,6 +252,7 @@ public class P2PClient {
                 break;
             default:
                 System.out.println(Constant.ERROR_INVALID_COMMAND);
+                scanner.nextLine();
                 break;
             }
 
