@@ -1,5 +1,6 @@
 import java.io.BufferedReader;
 import java.io.DataOutputStream;
+import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.InputStreamReader;
 import java.io.IOException;
@@ -10,10 +11,13 @@ import java.net.Socket;
 public class P2PTransientServer {
 
     public static void main(String[] args) {
+        new File(Constant.DEFAULT_DIRECTORY).mkdirs();
+
         int port = Constant.P2P_SERVER_PORT; // fixed port number
 
         P2PTransientServer serverInstance = new P2PTransientServer();
         serverInstance.start(port);
+        System.out.println("P2P transient server closed. Goodbye!");
     }
 
     private void start(int port) {
@@ -22,6 +26,7 @@ public class P2PTransientServer {
 
         try{
             ServerSocket welcomeSocket = new ServerSocket (port);
+            System.out.println("P2P transient server running on port 9019...");
 
             while (flag) {
                 Socket connectionSocket = welcomeSocket.accept();
@@ -41,30 +46,55 @@ public class P2PTransientServer {
     private boolean handleClientSocket(Socket client) {
         InputStreamReader isr;
         BufferedReader br;
+        String msgType;
         String fileName;
+        String chunkNumString;
         int chunkNum;
+        int flag = 0;
 
         try {
             isr = new InputStreamReader(client.getInputStream());
             br = new BufferedReader(isr);
-            fileName = br.readLine();
-            if (fileName.equals(Constant.COMMAND_EXIT)) { // we assume file name cannot be "EXIT"
+            msgType = br.readLine();
+
+            if (msgType.equals(Constant.COMMAND_EXIT)) { // it is an EXIT command
                 byte[] buffer = Constant.MESSAGE_ACK.getBytes();
                 sendP2PResponse(client, buffer);
-                return false;
-            }
-            chunkNum = Integer.parseInt(br.readLine());
+                flag = 1;
 
-            sendP2PResponse(client, formP2PResponse(fileName, chunkNum));
+            } else if (msgType.equals(Constant.COMMAND_QUERY)) { // it is a download request
+                fileName = br.readLine();
+                chunkNumString = br.readLine();
+                chunkNum = Integer.parseInt(chunkNumString);
+
+                sendP2PResponse(client, formP2PResponse(fileName, chunkNum));
+
+            } else { // it is an invalid query
+
+            }
+
         } catch (IOException ioe) {
-            return true;
+            if (flag==1) {
+                return false;
+            } else {
+                return true;
+            }
         }
 
         try {
             client.close();
-            return true;
+            if (flag==1) {
+                return false;
+            } else {
+                return true;
+            }
+
         } catch (IOException ioe1) {
-            return true;
+            if (flag==1) {
+                return false;
+            } else {
+                return true;
+            }
         }
     }
 
@@ -90,7 +120,8 @@ public class P2PTransientServer {
      */
     private byte[] formP2PResponse(String fileName, int chunkNum) {
         try{
-            String directoryPath = this.getClass().getResource(Constant.PATH_RESOURCE).getPath();
+            String directoryPath = this.getClass().getResource(Constant.DEFAULT_DIRECTORY).getPath();
+
             RandomAccessFile file = new RandomAccessFile(directoryPath + fileName, "r");
             file.seek(Constant.CHUNK_SIZE*(chunkNum-1));
             byte[] buffer = new byte[Constant.CHUNK_SIZE];

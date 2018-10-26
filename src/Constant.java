@@ -9,7 +9,7 @@ public class Constant {
     public static final int P2P_SERVER_PORT = 9019;
     public static final int CHUNK_SIZE = 1024;
 
-    public static final String PATH_RESOURCE = "resource/";
+    public static final String DEFAULT_DIRECTORY = "resource/";
 
     public static final String MESSAGE_DELIMITER = "\r\n";
     public static final String MESSAGE_ACK = "ACK";
