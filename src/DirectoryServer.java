@@ -47,8 +47,7 @@ public class DirectoryServer {
 
             Host randomlySelectedHost = listOfHosts.get(randomNumber);
 
-            return message + randomlySelectedHost.getIPAddress() + Constant.MESSAGE_DELIMITER
-                    + randomlySelectedHost.getPortNumber() + Constant.MESSAGE_DELIMITER;
+            return message + randomlySelectedHost.getIPAddress() + Constant.MESSAGE_DELIMITER;
         }
 
     }

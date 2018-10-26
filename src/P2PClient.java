@@ -51,9 +51,8 @@ public class P2PClient {
             return Constant.ERROR_FILE_NOT_EXIST;
         } else {
             String p2pServerIP = messageReceived;
-            int p2pServerPort = Integer.parseInt(sc.nextLine());
 
-            return "File " + fileName + " found at port " + p2pServerPort + " of P2P server " + p2pServerIP;
+            return "File " + fileName + " found at port " + Constant.P2P_SERVER_PORT + " of P2P server " + p2pServerIP;
         }
     }
 
