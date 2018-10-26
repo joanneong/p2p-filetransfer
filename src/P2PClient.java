@@ -60,7 +60,7 @@ public class P2PClient {
 
     private String getDownloadMessage(String fileName) throws IOException {
 
-        FileOutputStream fos = new FileOutputStream(fileName);
+        FileOutputStream fos = new FileOutputStream(Constant.DEFAULT_DIRECTORY + fileName);
         BufferedOutputStream bos = new BufferedOutputStream(fos);
 
         int chunkNumber = 1;
@@ -79,7 +79,6 @@ public class P2PClient {
                     break;
                 }
             }
-            String p2pServerIP = messageReceived.substring(i);
 
             Socket socketToP2PServer = connectToServer(p2pServerIP, Constant.P2P_SERVER_PORT);
 
@@ -173,14 +172,17 @@ public class P2PClient {
 
     private int getNumberOfChunks(String fileName) throws IOException {
 
-        BufferedReader br = new BufferedReader(new FileReader(fileName));
+        BufferedReader br = new BufferedReader(new FileReader(Constant.DEFAULT_DIRECTORY + fileName));
         char[] buffer = new char[1024];
 
         int chunkCount = 0;
         while (br.read(buffer) != -1) {
-            System.out.println("Is counting...");
+            //System.out.println("Is counting...");
             chunkCount++;
         }
+
+        br.close();
+
         return chunkCount;
     }
 
