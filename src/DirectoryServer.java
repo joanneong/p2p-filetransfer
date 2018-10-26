@@ -41,6 +41,8 @@ public class DirectoryServer {
 
         } else {
 
+            System.out.println("The chunk exists!");
+
             int randomNumber = (int) Math.random() * listOfHosts.size();
 
             Host randomlySelectedHost = listOfHosts.get(randomNumber);
@@ -82,6 +84,7 @@ public class DirectoryServer {
      */
     private void send(Socket client, String messageToSend) {
         try {
+            System.out.println("Server is sending client: " + messageToSend);
             PrintWriter writer = new PrintWriter(client.getOutputStream(), true);
             writer.println(messageToSend);
 
@@ -265,7 +268,7 @@ public class DirectoryServer {
         @Override
         public boolean equals(Object other) {
             return other == this
-                    || (other instanceof Host
+                    || (other instanceof Chunk
                     && this.chunkNumber == ((Chunk) other).chunkNumber
                     && this.filename.equals(((Chunk) other).filename));
 
