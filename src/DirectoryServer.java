@@ -10,10 +10,11 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-public class DirectoryServer {
+public class DirectoryServer implements Runnable {
 
     private HashMap<Chunk, List<Host>> firstTable;
     private HashMap<Host, List<Chunk>> secondTable;
+    private Socket acceptedClientSocket;
 
     /**
      * Constructor
@@ -21,6 +22,13 @@ public class DirectoryServer {
     public DirectoryServer() {
         this.firstTable = new HashMap<>();
         this.secondTable = new HashMap<>();
+    }
+
+    public DirectoryServer(Socket acceptedClientSocket, HashMap<Chunk, List<Host>> firstTable,
+                           HashMap<Host, List<Chunk>> secondTable) {
+        this.acceptedClientSocket = acceptedClientSocket;
+        this.firstTable = firstTable;
+        this.secondTable = secondTable;
     }
 
     private String getAckMessage() {
@@ -218,23 +226,31 @@ public class DirectoryServer {
             send(client, reply);
     }
 
-    private void start() {
+    private void startWelcomeSocket() {
         try {
             ServerSocket serverSocket = new ServerSocket(Constant.DIR_SERVER_PORT);
-            System.out.println("The directory server is up and running...");
+            System.out.println("The welcome socket directory server is up and running...");
 
             while(true) {
                 System.out.println("Waiting for new client connection...");
                 Socket clientSocket = serverSocket.accept();
                 System.out.println("New connection request from a client!");
 
-                while (!clientSocket.isClosed()) {
-                    handleClientSocket(clientSocket);
-                }
+                DirectoryServer newServer = new DirectoryServer(clientSocket, firstTable, secondTable);
+                new Thread(newServer).start();
             }
         } catch (IOException ioe) {
             System.err.println(ioe.getMessage());
         }
+    }
+
+    @Override
+    public void run() {
+        System.out.println("New thread created to entertain the client...");
+        while (!acceptedClientSocket.isClosed()) {
+            handleClientSocket(acceptedClientSocket);
+        }
+        System.out.println("Client exits...");
     }
 
     private String[] parse(String message) {
@@ -243,7 +259,7 @@ public class DirectoryServer {
 
     public static void main(String[] args) {
         DirectoryServer directoryServer = new DirectoryServer();
-        directoryServer.start();
+        directoryServer.startWelcomeSocket();
     }
 
     private class Chunk {
