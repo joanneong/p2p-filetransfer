@@ -5,6 +5,7 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.Socket;
+import java.util.Arrays;
 import java.util.Scanner;
 
 public class P2PClient {
@@ -48,11 +49,11 @@ public class P2PClient {
         sc.nextLine();
 
         if (messageReceived.equals(Constant.MESSAGE_CHUNK_NOT_EXIST)) {
-            return Constant.ERROR_FILE_NOT_EXIST;
+            return Constant.ERROR_QUERY_FILE_NOT_EXIST;
         } else {
             String p2pServerIP = messageReceived;
 
-            return "File " + fileName + " found at port " + Constant.P2P_SERVER_PORT + " of P2P server " + p2pServerIP;
+            return "File " + fileName + " found at port " + Constant.P2P_SERVER_PORT + " of P2P server " + p2pServerIP + Constant.MESSAGE_DELIMITER;
         }
     }
 
@@ -67,18 +68,18 @@ public class P2PClient {
         while (true) {
             messageReceived = getQueryMessage(fileName, chunkNumber);
 
-            if (messageReceived.equals(Constant.ERROR_FILE_NOT_EXIST)) {
+            if (messageReceived.equals(Constant.ERROR_QUERY_FILE_NOT_EXIST)) {
                 break;
             }
 
             int i;
             for (i = 0; i < messageReceived.length() - 10; i++) {
                 if (messageReceived.substring(i, i + 10).equals("P2P server")) {
-                    i = i + 11;
+                    i = i + 12;
                     break;
                 }
             }
-            String p2pServerIP = messageReceived.substring(i);
+            String p2pServerIP = messageReceived.substring(i, messageReceived.length() - 2);
 
             Socket socketToP2PServer = connectToServer(p2pServerIP, Constant.P2P_SERVER_PORT);
 
@@ -95,7 +96,10 @@ public class P2PClient {
 
         bos.close();
 
-        return "File " + fileName + " downloaded from peer server";
+        if (chunkNumber == 1) {
+            return Constant.ERROR_DOWNLOAD_FILE_NOT_EXIST;
+        }
+        return "File " + fileName + " downloaded from peer server" + Constant.MESSAGE_DELIMITER;
     }
 
     private String getListMessage() {
@@ -136,7 +140,7 @@ public class P2PClient {
 
         sendExitToOwnServer();
 
-        return messageReceived;
+        return messageReceived + Constant.MESSAGE_DELIMITER;
     }
 
     private void sendExitToOwnServer() throws IOException {
@@ -160,8 +164,15 @@ public class P2PClient {
 
     private void receiveDataFromP2PServer(BufferedOutputStream bos, Socket socketToP2PServer) throws IOException {
         byte[] buffer = new byte[1024];
-        socketToP2PServer.getInputStream().read(buffer);
-        bos.write(buffer);
+        int bytesRead = socketToP2PServer.getInputStream().read(buffer);
+
+        if (bytesRead == Constant.CHUNK_SIZE) {
+            bos.write(buffer);
+        } else { //it is the case for the last packet
+            byte[] subBuffer = Arrays.copyOfRange(buffer, 0, bytesRead);
+            bos.write(subBuffer);
+        }
+
         bos.flush();
     }
 
@@ -178,7 +189,12 @@ public class P2PClient {
 
     private int getNumberOfChunks(String fileName) throws IOException {
 
-        BufferedReader br = new BufferedReader(new FileReader(Constant.DEFAULT_DIRECTORY + fileName));
+        BufferedReader br;
+        try {
+            br = new BufferedReader(new FileReader(Constant.DEFAULT_DIRECTORY + fileName));
+        } catch (IOException e) {
+            return -1;
+        }
 
         char[] buffer = new char[1024];
 
@@ -218,6 +234,11 @@ public class P2PClient {
                 chunkNumber = getNumberOfChunks(fileName);
                 System.out.println("Number of chunks: " + chunkNumber);
 
+                if (chunkNumber == -1) {
+                    System.out.println(Constant.ERROR_INFORM_FILE_NOT_EXIST);
+                    break;
+                }
+
                 boolean isInformSuccess = true;
                 for (int i = 1; i <= chunkNumber; i++) {
                     replyMessage = getInformMessage(fileName, i);
@@ -228,7 +249,7 @@ public class P2PClient {
                     }
                 }
                 if (isInformSuccess) {
-                    System.out.println("File " + fileName + " informed to directory server");
+                    System.out.println("File " + fileName + " informed to directory server" + Constant.MESSAGE_DELIMITER);
                 }
                 break;
             case Constant.COMMAND_QUERY:
@@ -252,6 +273,7 @@ public class P2PClient {
                 break;
             default:
                 System.out.println(Constant.ERROR_INVALID_COMMAND);
+                scanner.nextLine();
                 break;
             }
 

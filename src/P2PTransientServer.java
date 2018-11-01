@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.Arrays;
 
 public class P2PTransientServer implements Runnable {
 
@@ -136,15 +137,24 @@ public class P2PTransientServer implements Runnable {
      * @return a byte[] that contains the data to be sent to the client
      */
     private byte[] formP2PResponse(String fileName, int chunkNum) {
+        int bytesRead; //number of bytes read
+
         try{
             String directoryPath = this.getClass().getResource(Constant.DEFAULT_DIRECTORY).getPath();
 
             RandomAccessFile file = new RandomAccessFile(directoryPath + fileName, "r");
-            file.seek(Constant.CHUNK_SIZE*(chunkNum-1));
+            file.seek(Constant.CHUNK_SIZE*(chunkNum-1)); //move the pointer to the position where we start reading
             byte[] buffer = new byte[Constant.CHUNK_SIZE];
-            file.read(buffer);
+            bytesRead = file.read(buffer);
             file.close();
-            return buffer;
+
+            if (bytesRead == Constant.CHUNK_SIZE) {
+                return buffer;
+            } else { //it is the case for the last packet
+                byte[] subBuffer = Arrays.copyOfRange(buffer, 0, bytesRead);
+                return subBuffer;
+            }
+
         } catch (FileNotFoundException fnfe) { // we assume this will not happen
             byte[] buffer = new byte[Constant.CHUNK_SIZE];
             return buffer;
