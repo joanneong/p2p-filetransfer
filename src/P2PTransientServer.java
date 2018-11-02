@@ -63,7 +63,7 @@ public class P2PTransientServer {
                 sendP2PResponse(client, buffer);
                 flag = 1;
 
-            } else if (msgType.equals(Constant.COMMAND_IPCONFIG)) { // it is an Ipconfig command
+            } else if (msgType.equals(Constant.COMMAND_IPCONFIG)) { // it is an IPCONFIG command
                 try {
                     Ipconfig ipconfig = STUNClient.getPubIpconfig();
                     String ip = ipconfig.getIp();
