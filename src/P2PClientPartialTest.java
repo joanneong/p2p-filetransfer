@@ -104,7 +104,7 @@ public class P2PClientPartialTest {
         String replyMessage;
         int chunkNumber;
 
-        System.out.println("File name: " + "Sample_Essay_1.docx");
+        /*System.out.println("File name: " + "Sample_Essay_1.docx");
         chunkNumber = getNumberOfChunks("resource/Sample_Essay_1.docx");
         System.out.println("Number of chunks: " + chunkNumber);
 
@@ -112,16 +112,32 @@ public class P2PClientPartialTest {
         System.out.println(replyMessage);
 
         sendExitToOwnServer();
-        System.out.println("P2P server closed.");
+        System.out.println("P2P server closed.");*/
 
     }
 
+    private void askIpconfigToOwnServer() throws IOException {
+        Socket socketToOwnServer = connectToServer("localhost", Constant.P2P_SERVER_PORT);
+        PrintWriter writerToOwnServer = new PrintWriter(socketToOwnServer.getOutputStream(), true);
+        writerToOwnServer.println(Constant.COMMAND_IPCONFIG);
+        writerToOwnServer.flush();
+
+        Scanner scFromOwnServer = new Scanner(socketToOwnServer.getInputStream());
+        String response = scFromOwnServer.nextLine();
+        System.out.println(response);
+
+        scFromOwnServer.close();
+        socketToOwnServer.close();
+    }
+
     public static void main(String[] args) {
-        new File(TEMP_DIRECTORY).mkdirs();
+        //new File(TEMP_DIRECTORY).mkdirs();
 
         try {
             P2PClientPartialTest client = new P2PClientPartialTest();
             client.start("localhost", 9200); //the value here will not be used
+            client.askIpconfigToOwnServer();
+
         } catch (IOException e) {
             e.printStackTrace();
         }

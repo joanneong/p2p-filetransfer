@@ -4,6 +4,7 @@ public class Constant {
     public static final String COMMAND_QUERY = "QUERY";
     public static final String COMMAND_LIST = "LIST";
     public static final String COMMAND_EXIT = "EXIT";
+    public static final String COMMAND_IPCONFIG = "Ipconfig";
 
     public static final int DIR_SERVER_PORT = 9090;
     public static final int P2P_SERVER_PORT = 9019;
