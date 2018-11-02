@@ -105,9 +105,10 @@ public class DirectoryServer implements Runnable {
         }
     }
 
-    private void handleInformMsg(Socket client, String filename, int chunkNumber) {
-        String IPAddress = client.getInetAddress().toString();
-        int portNumber = client.getPort();
+    private void handleInformMsg(String filename, int chunkNumber,
+                                 String clientPublicIp, int clientPublicPort) {
+        String IPAddress = clientPublicIp;
+        int portNumber = clientPublicPort;
 
         Host host = new Host(IPAddress, portNumber);
         Chunk chunk = new Chunk(filename, chunkNumber);
@@ -165,7 +166,9 @@ public class DirectoryServer implements Runnable {
 
                 String filename = parsedClientMsg[1];
                 int chunkNumber = Integer.parseInt(parsedClientMsg[2]);
-                handleInformMsg(client, filename, chunkNumber);
+                String clientPublicIp = parsedClientMsg[3];
+                int clientPublicPort = Integer.parseInt(parsedClientMsg[4]);
+                handleInformMsg(filename, chunkNumber, clientPublicIp, clientPublicPort);
                 return getAckMessage();
 
             case Constant.COMMAND_QUERY:
