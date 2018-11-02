@@ -166,10 +166,11 @@ public class P2PClient {
 
         Scanner scFromOwnServer = new Scanner(socketToOwnServer.getInputStream());
         String response = scFromOwnServer.nextLine();
-        return response;
 
         scFromOwnServer.close();
         socketToOwnServer.close();
+
+        return response;
     }
 
     private Socket connectToServer(String p2pServerIP, int p2pServerPort) throws IOException {
@@ -236,6 +237,19 @@ public class P2PClient {
         pw = new PrintWriter(clientSocket.getOutputStream(), true);
         sc = new Scanner(clientSocket.getInputStream());
 
+        // Inform directory server own transient server's public IP and port
+        String toServer = Constant.COMMAND_IPCONFIG + Constant.MESSAGE_DELIMITER
+                + askIpconfigToOwnServer() + Constant.MESSAGE_DELIMITER;
+        pw.println(toServer);
+        pw.flush();
+        messageReceived = sc.nextLine();
+        sc.nextLine();
+        if (messageReceived.equals(Constant.MESSAGE_ACK)) {
+            System.out.println(Constant.MESSAGE_IP_PORT_INFORMED);
+        } else {
+            System.out.println(Constant.ERROR_IP_PORT_INFORM_FAILED);
+        }
+
         String fileName;
         String replyMessage;
         int chunkNumber;
@@ -285,9 +299,6 @@ public class P2PClient {
                 replyMessage = getExitMessage();
                 System.out.println(replyMessage);
                 break;
-            case Constant.COMMAND_IPCONFIG:
-                replyMessage = getIpconfigMessage();
-                System.out.println(replyMessage);
             default:
                 System.out.println(Constant.ERROR_INVALID_COMMAND);
                 scanner.nextLine();

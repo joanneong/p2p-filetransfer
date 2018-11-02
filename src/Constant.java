@@ -4,7 +4,7 @@ public class Constant {
     public static final String COMMAND_QUERY = "QUERY";
     public static final String COMMAND_LIST = "LIST";
     public static final String COMMAND_EXIT = "EXIT";
-    public static final String COMMAND_IPCONFIG = "Ipconfig";
+    public static final String COMMAND_IPCONFIG = "IPCONFIG";
 
     public static final int DIR_SERVER_PORT = 9090;
     public static final int P2P_SERVER_PORT = 9019;
@@ -18,6 +18,7 @@ public class Constant {
     public static final String MESSAGE_CHUNK_NOT_EXIST = "CHUNK NOT EXIST";
     public static final String MESSAGE_FILE_LIST_EMPTY = "FILE LIST EMPTY";
     public static final String MESSAGE_GOODBYE = "GOODBYE";
+    public static final String MESSAGE_IP_PORT_INFORMED = "Public IP and port informed to directory server";
 
     public static final String ERROR_CLIENT_INFORM_FAILED = "Inform failed";
     public static final String ERROR_INFORM_FILE_NOT_EXIST = "File informed does not exist" + MESSAGE_DELIMITER;
@@ -25,4 +26,5 @@ public class Constant {
     public static final String ERROR_DOWNLOAD_FILE_NOT_EXIST = "File requested does not exist" + MESSAGE_DELIMITER;
     public static final String ERROR_INVALID_COMMAND = "Invalid command" + MESSAGE_DELIMITER;
     public static final String ERROR_OWN_SERVER_NOT_CLOSED = "Own host server is not closed!" + MESSAGE_DELIMITER;
+    public static final String ERROR_IP_PORT_INFORM_FAILED = "Public IP and port inform failed";
 }
