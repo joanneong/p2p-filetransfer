@@ -17,11 +17,16 @@ public class P2PClient {
 
     String messageReceived;
 
+    String ownServerPublicIP;
+    String ownServerPublicPort;
+
     private String getInformMessage(String fileName, int chunkNumber) {
 
         String toServer = Constant.COMMAND_INFORM + Constant.MESSAGE_DELIMITER
                 + fileName + Constant.MESSAGE_DELIMITER
-                + chunkNumber + Constant.MESSAGE_DELIMITER;
+                + chunkNumber + Constant.MESSAGE_DELIMITER
+                + ownServerPublicIP + Constant.MESSAGE_DELIMITER
+                + ownServerPublicPort + Constant.MESSAGE_DELIMITER;
         pw.println(toServer);
         pw.flush();
 
@@ -237,18 +242,11 @@ public class P2PClient {
         pw = new PrintWriter(clientSocket.getOutputStream(), true);
         sc = new Scanner(clientSocket.getInputStream());
 
-        // Inform directory server own transient server's public IP and port
-        String toServer = Constant.COMMAND_IPCONFIG + Constant.MESSAGE_DELIMITER
-                + askIpconfigToOwnServer() + Constant.MESSAGE_DELIMITER;
-        pw.println(toServer);
-        pw.flush();
-        messageReceived = sc.nextLine();
-        sc.nextLine();
-        if (messageReceived.equals(Constant.MESSAGE_ACK)) {
-            System.out.println(Constant.MESSAGE_IP_PORT_INFORMED);
-        } else {
-            System.out.println(Constant.ERROR_IP_PORT_INFORM_FAILED);
-        }
+        // Get own transient server's public IP and port
+        messageReceived = askIpconfigToOwnServer();
+        String[] temp = messageReceived.split(":");
+        ownServerPublicIP = temp[0];
+        ownServerPublicPort = temp[1];
 
         String fileName;
         String replyMessage;
