@@ -158,6 +158,20 @@ public class P2PClient {
         socketToOwnServer.close();
     }
 
+    private String askIpconfigToOwnServer() throws IOException {
+        Socket socketToOwnServer = connectToServer("localhost", Constant.P2P_SERVER_PORT);
+        PrintWriter writerToOwnServer = new PrintWriter(socketToOwnServer.getOutputStream(), true);
+        writerToOwnServer.println(Constant.COMMAND_IPCONFIG);
+        writerToOwnServer.flush();
+
+        Scanner scFromOwnServer = new Scanner(socketToOwnServer.getInputStream());
+        String response = scFromOwnServer.nextLine();
+        return response;
+
+        scFromOwnServer.close();
+        socketToOwnServer.close();
+    }
+
     private Socket connectToServer(String p2pServerIP, int p2pServerPort) throws IOException {
         return new Socket(p2pServerIP, p2pServerPort);
     }
@@ -271,6 +285,9 @@ public class P2PClient {
                 replyMessage = getExitMessage();
                 System.out.println(replyMessage);
                 break;
+            case Constant.COMMAND_IPCONFIG:
+                replyMessage = getIpconfigMessage();
+                System.out.println(replyMessage);
             default:
                 System.out.println(Constant.ERROR_INVALID_COMMAND);
                 scanner.nextLine();
