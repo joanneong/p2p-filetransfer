@@ -51,14 +51,16 @@ public class P2PClient {
 
         sc.nextLine();
         messageReceived = sc.nextLine();
-        sc.nextLine();
 
         if (messageReceived.equals(Constant.MESSAGE_CHUNK_NOT_EXIST)) {
+            sc.nextLine();
             return Constant.ERROR_QUERY_FILE_NOT_EXIST;
         } else {
             String p2pServerIP = messageReceived;
+            String p2pServerPort = sc.nextLine();
+            sc.nextLine();
 
-            return "File " + fileName + " found at port " + Constant.P2P_SERVER_PORT + " of P2P server " + p2pServerIP + Constant.MESSAGE_DELIMITER;
+            return "File " + fileName + " found at port " + p2pServerPort + " of P2P server " + p2pServerIP + Constant.MESSAGE_DELIMITER;
         }
     }
 
@@ -77,6 +79,7 @@ public class P2PClient {
                 break;
             }
 
+            // Get IP address of P2P server
             int i;
             for (i = 0; i < messageReceived.length() - 10; i++) {
                 if (messageReceived.substring(i, i + 10).equals("P2P server")) {
@@ -86,7 +89,21 @@ public class P2PClient {
             }
             String p2pServerIP = messageReceived.substring(i, messageReceived.length() - 2);
 
-            Socket socketToP2PServer = connectToServer(p2pServerIP, Constant.P2P_SERVER_PORT);
+            // Get port number of P2P server
+            for (i = 0; i < messageReceived.length() - 4; i++) {
+                if (messageReceived.substring(i, i + 4).equals("port")) {
+                    i = i + 5;
+                    break;
+                }
+            }
+            StringBuilder portBuilder = new StringBuilder();
+            while (messageReceived.charAt(i) != ' ') {
+                portBuilder.append(messageReceived.charAt(i));
+                i++;
+            }
+            int p2pServerPort = Integer.parseInt(portBuilder.toString());
+
+            Socket socketToP2PServer = connectToServer(p2pServerIP, p2pServerPort);
 
             sendQueryToP2PServer(fileName, chunkNumber, socketToP2PServer);
 
