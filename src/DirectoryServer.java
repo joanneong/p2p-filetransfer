@@ -51,7 +51,7 @@ public class DirectoryServer implements Runnable {
 
             System.out.println("The chunk exists!");
 
-            int randomNumber = (int) Math.random() * listOfHosts.size();
+            int randomNumber = (int) (Math.random() * listOfHosts.size());
 
             Host randomlySelectedHost = listOfHosts.get(randomNumber);
 
