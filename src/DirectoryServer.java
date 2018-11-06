@@ -129,6 +129,36 @@ public class DirectoryServer implements Runnable {
         }
         chunksOfTheHost.add(chunk);
         secondTable.put(host, chunksOfTheHost);
+        printFirstTableContent();
+        printSecondTableContent();
+    }
+
+    private void printFirstTableContent() {
+        HashMap<Chunk, List<Host>> table = firstTable;
+        String s = "";
+        for (Chunk chunk: table.keySet()) {
+            s += chunk.filename + " " + chunk.chunkNumber + "is at: \n";
+            for(Host host: table.get(chunk)) {
+                s += host.getIPAddress() + "." + host.getPortNumber() + " ";
+            }
+            s += "\n";
+        }
+        System.out.println("\nFirst table content:");
+        System.out.println(s);
+    }
+
+    private void printSecondTableContent() {
+        HashMap<Host, List<Chunk>> table = secondTable;
+        String s = "";
+        for (Host host: table.keySet()) {
+            s += host.getIPAddress() + "." + host.getPortNumber() + " has:\n";
+            for(Chunk chunk: table.get(host)) {
+                s += chunk.filename + " " + chunk.chunkNumber + " ";
+            }
+            s += "\n";
+        }
+        System.out.println("\nSecond table content:");
+        System.out.println(s);
     }
 
     private void handleExitMsg(Socket client) {
@@ -167,8 +197,8 @@ public class DirectoryServer implements Runnable {
 
                 String filename = parsedClientMsg[1];
                 int chunkNumber = Integer.parseInt(parsedClientMsg[2]);
-                String clientPublicIp = parsedClientMsg[3];
-                int clientPublicPort = Integer.parseInt(parsedClientMsg[4]);
+                String clientPublicIp = client.getInetAddress().toString();
+                int clientPublicPort = client.getPort();
                 handleInformMsg(filename, chunkNumber, clientPublicIp, clientPublicPort);
                 return getAckMessage();
 
@@ -227,7 +257,7 @@ public class DirectoryServer implements Runnable {
             System.out.println("Preparing directory server reply...");
             String reply = handleClientMsg(client, parsedClientMsg);
 
-            System.out.println("Sending directory server reply...");
+            System.out.println("Sending directory server reply to" + clientIp(client));
             send(client, reply);
         }
     }
@@ -240,7 +270,7 @@ public class DirectoryServer implements Runnable {
             while(true) {
                 System.out.println("Waiting for new client connection...");
                 Socket clientSocket = serverSocket.accept();
-                System.out.println("New connection request from a client!");
+                System.out.println("New connection request from " + clientIp(clientSocket));
 
                 DirectoryServer newServer = new DirectoryServer(clientSocket, firstTable, secondTable);
                 new Thread(newServer).start();
@@ -250,13 +280,17 @@ public class DirectoryServer implements Runnable {
         }
     }
 
+    private String clientIp(Socket socket) {
+        return socket.getInetAddress().toString() + ":" + socket.getPort();
+    }
+
     @Override
     public void run() {
-        System.out.println("New thread created to entertain the client...\n");
+        System.out.println("New thread created to entertain the client" + clientIp(acceptedClientSocket) + "\n");
         while (!acceptedClientSocket.isClosed()) {
             handleClientSocket(acceptedClientSocket);
         }
-        System.out.println("Client exits...");
+        System.out.println(clientIp(acceptedClientSocket) + " exits...\n");
     }
 
     private String[] parse(String message) {
