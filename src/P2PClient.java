@@ -4,7 +4,6 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.Socket;
-import java.util.Arrays;
 import java.util.Scanner;
 
 public class P2PClient {
@@ -121,6 +120,8 @@ public class P2PClient {
         bos.close();
 
         if (chunkNumber == 1) {
+            File file = new File(Constant.DEFAULT_DIRECTORY + fileName);
+            file.delete();
             return Constant.ERROR_DOWNLOAD_FILE_NOT_EXIST;
         }
         return "File " + fileName + " downloaded from peer server" + Constant.MESSAGE_DELIMITER;
@@ -203,16 +204,10 @@ public class P2PClient {
     }
 
     private void receiveDataFromP2PServer(BufferedOutputStream bos, Socket socketToP2PServer) throws IOException {
-        byte[] buffer = new byte[1024];
+        byte[] buffer = new byte[Constant.CHUNK_SIZE];
         int bytesRead = socketToP2PServer.getInputStream().read(buffer);
 
-        if (bytesRead == Constant.CHUNK_SIZE) {
-            bos.write(buffer);
-        } else { //it is the case for the last packet
-            byte[] subBuffer = Arrays.copyOfRange(buffer, 0, bytesRead);
-            bos.write(subBuffer);
-        }
-
+        bos.write(buffer, 0, bytesRead);
         bos.flush();
     }
 
@@ -227,7 +222,7 @@ public class P2PClient {
         writerToP2PServer.flush();
     }
 
-    private int getNumberOfChunks(String fileName) throws IOException {
+    private int getNumberOfChunks(String fileName) {
         File f = new File(Constant.DEFAULT_DIRECTORY + fileName);
         int fileLength = (int) f.length();
 
