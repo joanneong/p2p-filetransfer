@@ -9,7 +9,20 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.Arrays;
 
-public class P2PTransientServer {
+public class P2PTransientServer implements Runnable {
+
+    private Socket acceptedConnectionSocket;
+
+    /**
+     * Constructor
+     */
+    public P2PTransientServer() {
+
+    }
+
+    public P2PTransientServer(Socket connectionSocket) {
+        acceptedConnectionSocket = connectionSocket;
+    }
 
     public static void main(String[] args) {
         new File(Constant.DEFAULT_DIRECTORY).mkdirs();
@@ -18,24 +31,34 @@ public class P2PTransientServer {
 
         P2PTransientServer serverInstance = new P2PTransientServer();
         serverInstance.start(port);
-        System.out.println("P2P transient server closed. Goodbye!");
     }
 
     private void start(int port) {
-
-        boolean flag = true;
 
         try{
             ServerSocket welcomeSocket = new ServerSocket (port);
             System.out.println("P2P transient server running on port 9019...");
 
-            while (flag) {
+            while (true) {
                 Socket connectionSocket = welcomeSocket.accept();
-                flag = handleClientSocket(connectionSocket);
+
+                P2PTransientServer newServerInstance = new P2PTransientServer(connectionSocket);
+                new Thread(newServerInstance).start();
             }
 
         } catch (IOException ioe) {
             System.out.println(ioe.getMessage());
+        }
+    }
+
+    @Override
+    public void run() {
+        System.out.println("New thread created to entertain the client" + acceptedConnectionSocket.getInetAddress().toString() + "\n");
+        boolean isExit = handleClientSocket(acceptedConnectionSocket);
+        System.out.println(acceptedConnectionSocket.getInetAddress().toString() + " exits...\n");
+        if (isExit) {
+            System.out.println("P2P transient server closed. Goodbye!");
+            System.exit(0);
         }
     }
 
@@ -51,7 +74,7 @@ public class P2PTransientServer {
         String fileName;
         String chunkNumString;
         int chunkNum;
-        int flag = 0;
+        boolean isExit = false;
 
         try {
             isr = new InputStreamReader(client.getInputStream());
@@ -61,7 +84,7 @@ public class P2PTransientServer {
             if (msgType.equals(Constant.COMMAND_EXIT)) { // it is an EXIT command
                 byte[] buffer = Constant.MESSAGE_ACK.getBytes();
                 sendP2PResponse(client, buffer);
-                flag = 1;
+                isExit = true;
 
             }
             // This command is disabled due to symmetric network
@@ -90,29 +113,9 @@ public class P2PTransientServer {
 
         } catch (IOException ioe) {
             System.out.println(ioe.getMessage());
-            if (flag==1) {
-                return false;
-            } else {
-                return true;
-            }
         }
 
-        try {
-            client.close();
-            if (flag==1) {
-                return false;
-            } else {
-                return true;
-            }
-
-        } catch (IOException ioe) {
-            System.out.println(ioe.getMessage());
-            if (flag==1) {
-                return false;
-            } else {
-                return true;
-            }
-        }
+        return isExit;
     }
 
     /**
