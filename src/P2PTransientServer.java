@@ -9,7 +9,16 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.Arrays;
 
-public class P2PTransientServer {
+public class P2PTransientServer implements Runnable {
+
+    private Socket acceptedClientSocket = null;
+    private boolean flag = true;
+
+    public P2PTransientServer(Socket acceptedClientSocket) {
+        this.acceptedClientSocket = acceptedClientSocket;
+    }
+
+    public P2PTransientServer() {}
 
     public static void main(String[] args) {
         new File(Constant.DEFAULT_DIRECTORY).mkdirs();
@@ -23,20 +32,28 @@ public class P2PTransientServer {
 
     private void start(int port) {
 
-        boolean flag = true;
-
         try{
             ServerSocket welcomeSocket = new ServerSocket (port);
             System.out.println("P2P transient server running on port 9019...");
 
             while (flag) {
                 Socket connectionSocket = welcomeSocket.accept();
-                flag = handleClientSocket(connectionSocket);
+                P2PTransientServer newServer = new P2PTransientServer(connectionSocket);
+                new Thread(newServer).start();
             }
 
         } catch (IOException ioe) {
             System.out.println(ioe.getMessage());
         }
+    }
+
+    @Override
+    public void run() {
+        System.out.println("New thread created to entertain the client...\n");
+        while (!acceptedClientSocket.isClosed()) {
+            flag = handleClientSocket(acceptedClientSocket);
+        }
+        System.out.println("Client exits...");
     }
 
     /**
