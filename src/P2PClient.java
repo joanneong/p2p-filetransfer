@@ -334,8 +334,14 @@ public class P2PClient {
         int serverPort = Integer.parseInt(args[1]);
 
         try {
+
             P2PClient client = new P2PClient();
             client.start(serverIP, serverPort);
+
+            new File(Constant.DEFAULT_DIRECTORY).mkdirs();
+            P2PTransientServer serverInstance = new P2PTransientServer();
+            serverInstance.start(Constant.DIR_SERVER_PORT);
+
         } catch (IOException e) {
             e.printStackTrace();
         }

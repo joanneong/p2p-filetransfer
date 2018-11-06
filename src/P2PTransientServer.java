@@ -13,6 +13,7 @@ public class P2PTransientServer implements Runnable {
 
     private Socket acceptedClientSocket = null;
     private boolean flag = true;
+    private boolean EXIT_SERVER = false;
 
     public P2PTransientServer(Socket acceptedClientSocket) {
         this.acceptedClientSocket = acceptedClientSocket;
@@ -20,17 +21,7 @@ public class P2PTransientServer implements Runnable {
 
     public P2PTransientServer() {}
 
-    public static void main(String[] args) {
-        new File(Constant.DEFAULT_DIRECTORY).mkdirs();
-
-        int port = Constant.P2P_SERVER_PORT; // fixed port number
-
-        P2PTransientServer serverInstance = new P2PTransientServer();
-        serverInstance.start(port);
-        System.out.println("P2P transient server closed. Goodbye!");
-    }
-
-    private void start(int port) {
+    public void start(int port) {
 
         try{
             ServerSocket welcomeSocket = new ServerSocket (port);
@@ -69,7 +60,7 @@ public class P2PTransientServer implements Runnable {
         String fileName;
         String chunkNumString;
         int chunkNum;
-        int flag = 0;
+        boolean flag = true;
 
         try {
             isr = new InputStreamReader(client.getInputStream());
@@ -79,7 +70,7 @@ public class P2PTransientServer implements Runnable {
             if (msgType.equals(Constant.COMMAND_EXIT)) { // it is an EXIT command
                 byte[] buffer = Constant.MESSAGE_ACK.getBytes();
                 sendP2PResponse(client, buffer);
-                flag = 1;
+                flag = EXIT_SERVER;
 
             }
             // This command is disabled due to symmetric network
@@ -109,28 +100,16 @@ public class P2PTransientServer implements Runnable {
 
         } catch (IOException ioe) {
             System.out.println(ioe.getMessage());
-            if (flag==1) {
-                return false;
-            } else {
-                return true;
-            }
+            return flag;
         }
 
         try {
             client.close();
-            if (flag==1) {
-                return false;
-            } else {
-                return true;
-            }
+            return flag;
 
         } catch (IOException ioe) {
             System.out.println(ioe.getMessage());
-            if (flag==1) {
-                return false;
-            } else {
-                return true;
-            }
+            return flag;
         }
     }
 
