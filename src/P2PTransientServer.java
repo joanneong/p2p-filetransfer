@@ -34,7 +34,7 @@ public class P2PTransientServer implements Runnable {
 
         try{
             ServerSocket welcomeSocket = new ServerSocket (port);
-            System.out.println("P2P transient server running on port 9019...");
+            System.out.println("P2P transient server running on port 9019...\n");
 
             while (true) {
                 Socket connectionSocket = welcomeSocket.accept();
@@ -50,7 +50,7 @@ public class P2PTransientServer implements Runnable {
 
     @Override
     public void run() {
-        System.out.println("New thread created to entertain the client " + clientIp(acceptedConnectionSocket) + "\n");
+        System.out.println("New thread created to entertain the client " + clientIp(acceptedConnectionSocket));
         boolean isExit = handleClientSocket(acceptedConnectionSocket);
         System.out.println(clientIp(acceptedConnectionSocket) + " exits...\n");
         if (isExit) {
@@ -86,6 +86,7 @@ public class P2PTransientServer implements Runnable {
             if (msgType.equals(Constant.COMMAND_EXIT)) {
 
                 byte[] buffer = Constant.MESSAGE_ACK.getBytes();
+                System.out.println("Requested to exit by own client");
                 sendP2PResponse(client, buffer);
                 isExit = true;
 

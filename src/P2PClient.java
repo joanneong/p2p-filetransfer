@@ -24,7 +24,7 @@ public class P2PClient {
         pw.flush();
 
         messageReceived = sc.nextLine();
-        System.out.println("Message from directory server: " + messageReceived);
+        System.out.println("Inform chunk " + chunkNumber + " to directory server: " + messageReceived);
         sc.nextLine();
 
         if (messageReceived.equals(Constant.MESSAGE_ACK)) {
