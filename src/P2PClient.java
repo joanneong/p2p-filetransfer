@@ -6,7 +6,7 @@ import java.io.PrintWriter;
 import java.net.Socket;
 import java.util.Scanner;
 
-public class P2PClient {
+public class P2PClient implements Runnable {
 
     Socket clientSocket;
 
@@ -14,6 +14,12 @@ public class P2PClient {
     Scanner sc;
 
     String messageReceived;
+
+    P2PTransientServer transientServer;
+
+    public P2PClient(P2PTransientServer serverInstance) {
+        this.transientServer = serverInstance;
+    }
 
     // String ownServerPublicIP;
     // String ownServerPublicPort;
@@ -154,7 +160,7 @@ public class P2PClient {
         return replyMessage.toString();
     }
 
-    private String getExitMessage() throws IOException {
+    private String getExitMessage() {
 
         String toServer = Constant.COMMAND_EXIT;
         pw.println(toServer);
@@ -163,24 +169,7 @@ public class P2PClient {
         messageReceived =  sc.nextLine();
         sc.nextLine();
 
-        sendExitToOwnServer();
-
         return messageReceived + Constant.MESSAGE_DELIMITER;
-    }
-
-    private void sendExitToOwnServer() throws IOException {
-        Socket socketToOwnServer = connectToServer("localhost", Constant.P2P_SERVER_PORT);
-        PrintWriter writerToOwnServer = new PrintWriter(socketToOwnServer.getOutputStream(), true);
-        writerToOwnServer.println(Constant.COMMAND_EXIT);
-        writerToOwnServer.flush();
-
-        Scanner scFromOwnServer = new Scanner(socketToOwnServer.getInputStream());
-        if (!scFromOwnServer.nextLine().equals(Constant.MESSAGE_ACK)) {
-            System.out.println(Constant.ERROR_OWN_SERVER_NOT_CLOSED);
-        }
-
-        scFromOwnServer.close();
-        socketToOwnServer.close();
     }
 
     // Ask own P2P server for public IP and port to inform directory server
@@ -315,6 +304,7 @@ public class P2PClient {
 
                 clientSocket.close();
 
+                System.out.println("Closing socket");
                 break;
             }
 
@@ -334,17 +324,29 @@ public class P2PClient {
         int serverPort = Integer.parseInt(args[1]);
 
         try {
+            P2PTransientServer serverInstance = new P2PTransientServer();
+            P2PClient newServer = new P2PClient(serverInstance);
+            new Thread(newServer).start();
 
-            P2PClient client = new P2PClient();
+            P2PClient client = new P2PClient(serverInstance);
             client.start(serverIP, serverPort);
 
-            new File(Constant.DEFAULT_DIRECTORY).mkdirs();
-            P2PTransientServer serverInstance = new P2PTransientServer();
-            serverInstance.start(Constant.DIR_SERVER_PORT);
+            client.transientServer.exit();
+            System.out.println("here");
 
         } catch (IOException e) {
             e.printStackTrace();
         }
+    }
+
+    @Override
+    public void run() {
+        System.out.println("New thread created to run transient server...\n");
+        new File(Constant.DEFAULT_DIRECTORY).mkdirs();
+
+        transientServer.start(Constant.P2P_SERVER_PORT);
+        System.out.println("Exiting...");
+        return;
     }
 
 }

@@ -12,8 +12,8 @@ import java.util.Arrays;
 public class P2PTransientServer implements Runnable {
 
     private Socket acceptedClientSocket = null;
-    private boolean flag = true;
-    private boolean EXIT_SERVER = false;
+
+    private boolean running = true;
 
     public P2PTransientServer(Socket acceptedClientSocket) {
         this.acceptedClientSocket = acceptedClientSocket;
@@ -27,7 +27,7 @@ public class P2PTransientServer implements Runnable {
             ServerSocket welcomeSocket = new ServerSocket (port);
             System.out.println("P2P transient server running on port 9019...");
 
-            while (flag) {
+            while (running) {
                 Socket connectionSocket = welcomeSocket.accept();
                 P2PTransientServer newServer = new P2PTransientServer(connectionSocket);
                 new Thread(newServer).start();
@@ -38,11 +38,15 @@ public class P2PTransientServer implements Runnable {
         }
     }
 
+    public void exit() {
+        running = false;
+    }
+
     @Override
     public void run() {
         System.out.println("New thread created to entertain the client...\n");
         while (!acceptedClientSocket.isClosed()) {
-            flag = handleClientSocket(acceptedClientSocket);
+            handleClientSocket(acceptedClientSocket);
         }
         System.out.println("Client exits...");
         return;
@@ -51,28 +55,20 @@ public class P2PTransientServer implements Runnable {
     /**
      * Handles requests sent by a client
      * @param  client Socket that handles the client connection
-     * @return a boolean that shows whether we want to close this server.
      */
-    private boolean handleClientSocket(Socket client) {
+    private void handleClientSocket(Socket client) {
         InputStreamReader isr;
         BufferedReader br;
         String msgType;
         String fileName;
         String chunkNumString;
         int chunkNum;
-        boolean flag = true;
 
         try {
             isr = new InputStreamReader(client.getInputStream());
             br = new BufferedReader(isr);
             msgType = br.readLine();
 
-            if (msgType.equals(Constant.COMMAND_EXIT)) { // it is an EXIT command
-                byte[] buffer = Constant.MESSAGE_ACK.getBytes();
-                sendP2PResponse(client, buffer);
-                flag = EXIT_SERVER;
-
-            }
             // This command is disabled due to symmetric network
             // else if (msgType.equals(Constant.COMMAND_IPCONFIG)) {
             //     try {
@@ -86,7 +82,7 @@ public class P2PTransientServer implements Runnable {
             //         System.out.println("cannot contact STUN server");
             //     }
             // }
-            else if (msgType.equals(Constant.COMMAND_QUERY)) { // it is a download request
+            if (msgType.equals(Constant.COMMAND_QUERY)) { // it is a download request
                 fileName = br.readLine();
                 chunkNumString = br.readLine();
                 chunkNum = Integer.parseInt(chunkNumString);
@@ -95,21 +91,18 @@ public class P2PTransientServer implements Runnable {
                 System.out.println("Sending " + fileName + " chunk No." + chunkNum + " to " + clientIp(client));
 
             } else { // it is an invalid query
-
+                System.out.println("Invalid query");
             }
 
         } catch (IOException ioe) {
             System.out.println(ioe.getMessage());
-            return flag;
         }
 
         try {
             client.close();
-            return flag;
 
         } catch (IOException ioe) {
             System.out.println(ioe.getMessage());
-            return flag;
         }
     }
 
