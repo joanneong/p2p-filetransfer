@@ -129,8 +129,6 @@ public class DirectoryServer implements Runnable {
         }
         chunksOfTheHost.add(chunk);
         secondTable.put(host, chunksOfTheHost);
-        printFirstTableContent();
-        printSecondTableContent();
     }
 
     private void printFirstTableContent() {
@@ -139,7 +137,7 @@ public class DirectoryServer implements Runnable {
         for (Chunk chunk: table.keySet()) {
             s += chunk.filename + " " + chunk.chunkNumber + "is at: \n";
             for(Host host: table.get(chunk)) {
-                s += host.getIPAddress() + "." + host.getPortNumber() + " ";
+                s += host.getIPAddress() + ":" + host.getPortNumber() + " ";
             }
             s += "\n";
         }
@@ -151,19 +149,19 @@ public class DirectoryServer implements Runnable {
         HashMap<Host, List<Chunk>> table = secondTable;
         String s = "";
         for (Host host: table.keySet()) {
-            s += host.getIPAddress() + "." + host.getPortNumber() + " has:\n";
+            s += host.getIPAddress() + ":" + host.getPortNumber() + " has:\n";
             for(Chunk chunk: table.get(host)) {
                 s += chunk.filename + " " + chunk.chunkNumber + " ";
             }
             s += "\n";
         }
-        System.out.println("\nSecond table content:");
+        System.out.println("Second table content:");
         System.out.println(s);
     }
 
     private void handleExitMsg(Socket client) {
         String clientIpAddress = client.getInetAddress().toString();
-        int clientPort = client.getPort();
+        int clientPort = Constant.P2P_SERVER_PORT;
         Host clientHost = new Host(clientIpAddress, clientPort);
 
         List<Chunk> clientChunks = secondTable.get(clientHost);
@@ -191,6 +189,7 @@ public class DirectoryServer implements Runnable {
 
         String type = parsedClientMsg[0];
         System.out.println("Client message has type: " + type);
+        String returnMessage;
 
         switch(type) {
             case Constant.COMMAND_INFORM:
@@ -200,26 +199,35 @@ public class DirectoryServer implements Runnable {
                 String clientPublicIp = client.getInetAddress().toString();
                 int clientPublicPort = Constant.P2P_SERVER_PORT;
                 handleInformMsg(filename, chunkNumber, clientPublicIp, clientPublicPort);
-                return getAckMessage();
+                returnMessage = getAckMessage();
+                break;
 
             case Constant.COMMAND_QUERY:
 
                 String filename2 = parsedClientMsg[1];
                 int chunkNumber2 = Integer.parseInt(parsedClientMsg[2]);
-                return getQueryReplyMessage(filename2, chunkNumber2);
+                returnMessage = getQueryReplyMessage(filename2, chunkNumber2);
+                break;
 
             case Constant.COMMAND_LIST:
 
-                return getListReplyMessage();
+                returnMessage = getListReplyMessage();
+                break;
 
             case Constant.COMMAND_EXIT:
 
                 handleExitMsg(client);
-                return getGoodbyeMessage();
+                returnMessage = getGoodbyeMessage();
+                break;
 
             default:
-                return "This is not a supported operation.";
+                returnMessage = "This is not a supported operation.";
         }
+
+        printFirstTableContent();
+        printSecondTableContent();
+
+        return returnMessage;
 
     }
 
