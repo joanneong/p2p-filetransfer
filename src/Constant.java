@@ -1,13 +1,14 @@
 public class Constant {
     public static final String COMMAND_DOWNLOAD = "DOWNLOAD";
-    public static final String COMMAND_INFORM = "INFORM";
-    public static final String COMMAND_QUERY = "QUERY";
-    public static final String COMMAND_LIST = "LIST";
     public static final String COMMAND_EXIT = "EXIT";
-    public static final String COMMAND_IPCONFIG = "IPCONFIG";
+    public static final String COMMAND_INFORM = "INFORM";
+    public static final String COMMAND_LIST = "LIST";
+    public static final String COMMAND_QUERY = "QUERY";
 
+    public static final String LOCALHOST_IP = "localhost";
     public static final int DIR_SERVER_PORT = 9090;
     public static final int P2P_SERVER_PORT = 9019;
+
     public static final int CHUNK_SIZE = 1024;
 
     public static final String DEFAULT_DIRECTORY = "resource/";

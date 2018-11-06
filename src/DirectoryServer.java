@@ -17,7 +17,7 @@ public class DirectoryServer implements Runnable {
     private Socket acceptedClientSocket;
 
     /**
-     * Constructor
+     * Constructors
      */
     public DirectoryServer() {
         this.firstTable = new HashMap<>();
@@ -44,15 +44,14 @@ public class DirectoryServer implements Runnable {
 
         if (listOfHosts == null || listOfHosts.isEmpty()) {
 
-            // Chunk not exists
+            // Chunk requested does not exist
             return message + Constant.MESSAGE_CHUNK_NOT_EXIST + Constant.MESSAGE_DELIMITER;
 
         } else {
 
-            System.out.println("The chunk exists!");
+            System.out.println("Chunk No." + chunkNumber + " for file " + filename + " exists!");
 
             int randomNumber = (int) (Math.random() * listOfHosts.size());
-
             Host randomlySelectedHost = listOfHosts.get(randomNumber);
 
             return message + randomlySelectedHost.getIPAddress() + Constant.MESSAGE_DELIMITER
@@ -62,6 +61,7 @@ public class DirectoryServer implements Runnable {
     }
 
     private String getListReplyMessage() {
+
         String listReplyMessage = Constant.MESSAGE_REPLY + Constant.MESSAGE_DELIMITER;
 
         Set<Chunk> chunksSet = firstTable.keySet();
@@ -108,10 +108,8 @@ public class DirectoryServer implements Runnable {
 
     private void handleInformMsg(String filename, int chunkNumber,
                                  String clientPublicIp, int clientPublicPort) {
-        String IPAddress = clientPublicIp;
-        int portNumber = clientPublicPort;
 
-        Host host = new Host(IPAddress, portNumber);
+        Host host = new Host(clientPublicIp, clientPublicPort);
         Chunk chunk = new Chunk(filename, chunkNumber);
 
         //Add to the first table
@@ -131,35 +129,8 @@ public class DirectoryServer implements Runnable {
         secondTable.put(host, chunksOfTheHost);
     }
 
-    private void printFirstTableContent() {
-        HashMap<Chunk, List<Host>> table = firstTable;
-        String s = "";
-        for (Chunk chunk: table.keySet()) {
-            s += chunk.filename + " " + chunk.chunkNumber + "is at: \n";
-            for(Host host: table.get(chunk)) {
-                s += host.getIPAddress() + ":" + host.getPortNumber() + " ";
-            }
-            s += "\n";
-        }
-        System.out.println("\nFirst table content:");
-        System.out.println(s);
-    }
-
-    private void printSecondTableContent() {
-        HashMap<Host, List<Chunk>> table = secondTable;
-        String s = "";
-        for (Host host: table.keySet()) {
-            s += host.getIPAddress() + ":" + host.getPortNumber() + " has:\n";
-            for(Chunk chunk: table.get(host)) {
-                s += chunk.filename + " " + chunk.chunkNumber + " ";
-            }
-            s += "\n";
-        }
-        System.out.println("Second table content:");
-        System.out.println(s);
-    }
-
     private void handleExitMsg(Socket client) {
+
         String clientIpAddress = client.getInetAddress().toString();
         int clientPort = Constant.P2P_SERVER_PORT;
         Host clientHost = new Host(clientIpAddress, clientPort);
@@ -193,39 +164,34 @@ public class DirectoryServer implements Runnable {
 
         switch(type) {
             case Constant.COMMAND_INFORM:
-
                 String filename = parsedClientMsg[1];
                 int chunkNumber = Integer.parseInt(parsedClientMsg[2]);
                 String clientPublicIp = client.getInetAddress().toString();
                 int clientPublicPort = Constant.P2P_SERVER_PORT;
+
                 handleInformMsg(filename, chunkNumber, clientPublicIp, clientPublicPort);
                 returnMessage = getAckMessage();
                 break;
 
             case Constant.COMMAND_QUERY:
-
                 String filename2 = parsedClientMsg[1];
                 int chunkNumber2 = Integer.parseInt(parsedClientMsg[2]);
+
                 returnMessage = getQueryReplyMessage(filename2, chunkNumber2);
                 break;
 
             case Constant.COMMAND_LIST:
-
                 returnMessage = getListReplyMessage();
                 break;
 
             case Constant.COMMAND_EXIT:
-
                 handleExitMsg(client);
                 returnMessage = getGoodbyeMessage();
                 break;
 
             default:
-                returnMessage = "This is not a supported operation.";
+                returnMessage = Constant.ERROR_INVALID_COMMAND;
         }
-
-        printFirstTableContent();
-        printSecondTableContent();
 
         return returnMessage;
 
@@ -265,7 +231,7 @@ public class DirectoryServer implements Runnable {
             System.out.println("Preparing directory server reply...");
             String reply = handleClientMsg(client, parsedClientMsg);
 
-            System.out.println("Sending directory server reply to" + clientIp(client));
+            System.out.println("Sending directory server reply to " + clientIp(client));
             send(client, reply);
         }
     }
@@ -294,7 +260,7 @@ public class DirectoryServer implements Runnable {
 
     @Override
     public void run() {
-        System.out.println("New thread created to entertain the client" + clientIp(acceptedClientSocket) + "\n");
+        System.out.println("New thread created to entertain the client " + clientIp(acceptedClientSocket) + "\n");
         while (!acceptedClientSocket.isClosed()) {
             handleClientSocket(acceptedClientSocket);
         }
