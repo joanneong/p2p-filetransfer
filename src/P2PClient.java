@@ -1,5 +1,6 @@
 import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
@@ -63,6 +64,11 @@ public class P2PClient {
     }
 
     private String getDownloadMessage(String fileName) throws IOException {
+
+        boolean isExist = new File(Constant.DEFAULT_DIRECTORY + fileName).exists();
+        if (isExist) {
+            return Constant.ERROR_DOWNLOAD_FILE_EXIST;
+        }
 
         FileOutputStream fos = new FileOutputStream(Constant.DEFAULT_DIRECTORY + fileName);
 
