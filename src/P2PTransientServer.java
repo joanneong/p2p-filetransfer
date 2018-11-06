@@ -54,6 +54,7 @@ public class P2PTransientServer implements Runnable {
             flag = handleClientSocket(acceptedClientSocket);
         }
         System.out.println("Client exits...");
+        return;
     }
 
     /**
@@ -100,6 +101,7 @@ public class P2PTransientServer implements Runnable {
                 chunkNum = Integer.parseInt(chunkNumString);
 
                 sendP2PResponse(client, formP2PResponse(fileName, chunkNum));
+                System.out.println("Sending " + fileName + " chunk No." + chunkNum + " to " + clientIp(client));
 
             } else { // it is an invalid query
 
@@ -165,8 +167,9 @@ public class P2PTransientServer implements Runnable {
             byte[] buffer = new byte[Constant.CHUNK_SIZE];
             bytesRead = file.read(buffer);
 
-            String value = new String(buffer, "UTF-8");
-            System.out.println("value:" + value+ "\n");
+//            To print value inside buffer
+//            String value = new String(buffer, "UTF-8");
+//            System.out.println("value:" + value+ "\n");
             
             file.close();
 
@@ -189,19 +192,7 @@ public class P2PTransientServer implements Runnable {
         }
     }
 
-
-    /**
-     * Concatenates 2 byte[] into a single byte[]
-     * This is a function provided for your convenience.
-     * @param  buffer1 a byte array
-     * @param  buffer2 another byte array
-     * @return concatenation of the 2 buffers
-     */
-    private byte[] concatenate(byte[] buffer1, byte[] buffer2) {
-        byte[] returnBuffer = new byte[buffer1.length + buffer2.length];
-        System.arraycopy(buffer1, 0, returnBuffer, 0, buffer1.length);
-        System.arraycopy(buffer2, 0, returnBuffer, buffer1.length, buffer2.length);
-        return returnBuffer;
+    private String clientIp(Socket socket) {
+        return socket.getInetAddress().toString() + ":" + socket.getPort();
     }
-
 }
