@@ -35,7 +35,7 @@ public class P2PTransientServer {
             }
 
         } catch (IOException ioe) {
-
+            System.out.println(ioe.getMessage());
         }
     }
 
@@ -89,6 +89,7 @@ public class P2PTransientServer {
             }
 
         } catch (IOException ioe) {
+            System.out.println(ioe.getMessage());
             if (flag==1) {
                 return false;
             } else {
@@ -104,7 +105,8 @@ public class P2PTransientServer {
                 return true;
             }
 
-        } catch (IOException ioe1) {
+        } catch (IOException ioe) {
+            System.out.println(ioe.getMessage());
             if (flag==1) {
                 return false;
             } else {
@@ -123,7 +125,9 @@ public class P2PTransientServer {
           DataOutputStream output = new DataOutputStream(client.getOutputStream());
           output.write(response);
           output.flush();
+          output.close();
       } catch (IOException ioe) {
+          System.out.println(ioe.getMessage());
       }
     }
 
@@ -137,25 +141,32 @@ public class P2PTransientServer {
         int bytesRead; //number of bytes read
 
         try{
-            String directoryPath = this.getClass().getResource(Constant.DEFAULT_DIRECTORY).getPath();
+            String directoryPath = Constant.DEFAULT_DIRECTORY;
 
             RandomAccessFile file = new RandomAccessFile(directoryPath + fileName, "r");
             file.seek(Constant.CHUNK_SIZE*(chunkNum-1)); //move the pointer to the position where we start reading
             byte[] buffer = new byte[Constant.CHUNK_SIZE];
             bytesRead = file.read(buffer);
+
+            String value = new String(buffer, "UTF-8");
+            System.out.println("value:" + value+ "\n");
+            
             file.close();
 
             if (bytesRead == Constant.CHUNK_SIZE) {
                 return buffer;
             } else { //it is the case for the last packet
                 byte[] subBuffer = Arrays.copyOfRange(buffer, 0, bytesRead);
+                System.out.println("length:"+subBuffer.length + "\n");
                 return subBuffer;
             }
 
         } catch (FileNotFoundException fnfe) { // we assume this will not happen
+            System.out.println(fnfe.getMessage());
             byte[] buffer = new byte[Constant.CHUNK_SIZE];
             return buffer;
         } catch (IOException ioe) {
+            System.out.println(ioe.getMessage());
             byte[] buffer = new byte[Constant.CHUNK_SIZE];
             return buffer;
         }
