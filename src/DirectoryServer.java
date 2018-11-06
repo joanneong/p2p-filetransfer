@@ -198,7 +198,7 @@ public class DirectoryServer implements Runnable {
                 String filename = parsedClientMsg[1];
                 int chunkNumber = Integer.parseInt(parsedClientMsg[2]);
                 String clientPublicIp = client.getInetAddress().toString();
-                int clientPublicPort = client.getPort();
+                int clientPublicPort = Constant.P2P_SERVER_PORT;
                 handleInformMsg(filename, chunkNumber, clientPublicIp, clientPublicPort);
                 return getAckMessage();
 

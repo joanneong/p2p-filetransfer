@@ -17,16 +17,14 @@ public class P2PClient {
 
     String messageReceived;
 
-    String ownServerPublicIP;
-    String ownServerPublicPort;
+    // String ownServerPublicIP;
+    // String ownServerPublicPort;
 
     private String getInformMessage(String fileName, int chunkNumber) {
 
         String toServer = Constant.COMMAND_INFORM + Constant.MESSAGE_DELIMITER
                 + fileName + Constant.MESSAGE_DELIMITER
-                + chunkNumber + Constant.MESSAGE_DELIMITER
-                + ownServerPublicIP + Constant.MESSAGE_DELIMITER
-                + ownServerPublicPort + Constant.MESSAGE_DELIMITER;
+                + chunkNumber + Constant.MESSAGE_DELIMITER;
         pw.println(toServer);
         pw.flush();
 
@@ -180,20 +178,21 @@ public class P2PClient {
         socketToOwnServer.close();
     }
 
-    private String askIpconfigToOwnServer() throws IOException {
-        Socket socketToOwnServer = connectToServer("localhost", Constant.P2P_SERVER_PORT);
-        PrintWriter writerToOwnServer = new PrintWriter(socketToOwnServer.getOutputStream(), true);
-        writerToOwnServer.println(Constant.COMMAND_IPCONFIG);
-        writerToOwnServer.flush();
+    // Ask own P2P server for public IP and port to inform directory server
+    // private String askIpconfigToOwnServer() throws IOException {
+    //     Socket socketToOwnServer = connectToServer("localhost", Constant.P2P_SERVER_PORT);
+    //     PrintWriter writerToOwnServer = new PrintWriter(socketToOwnServer.getOutputStream(), true);
+    //     writerToOwnServer.println(Constant.COMMAND_IPCONFIG);
+    //     writerToOwnServer.flush();
 
-        Scanner scFromOwnServer = new Scanner(socketToOwnServer.getInputStream());
-        String response = scFromOwnServer.nextLine();
+    //     Scanner scFromOwnServer = new Scanner(socketToOwnServer.getInputStream());
+    //     String response = scFromOwnServer.nextLine();
 
-        scFromOwnServer.close();
-        socketToOwnServer.close();
+    //     scFromOwnServer.close();
+    //     socketToOwnServer.close();
 
-        return response;
-    }
+    //     return response;
+    // }
 
     private Socket connectToServer(String p2pServerIP, int p2pServerPort) throws IOException {
         return new Socket(p2pServerIP, p2pServerPort);
@@ -259,11 +258,11 @@ public class P2PClient {
         pw = new PrintWriter(clientSocket.getOutputStream(), true);
         sc = new Scanner(clientSocket.getInputStream());
 
-        // Get own transient server's public IP and port
-        messageReceived = askIpconfigToOwnServer();
-        String[] temp = messageReceived.split(":");
-        ownServerPublicIP = temp[0];
-        ownServerPublicPort = temp[1];
+        // Get own transient server's public IP and port, disabled due to symmetric network
+        // messageReceived = askIpconfigToOwnServer();
+        // String[] temp = messageReceived.split(":");
+        // ownServerPublicIP = temp[0];
+        // ownServerPublicPort = temp[1];
 
         String fileName;
         String replyMessage;

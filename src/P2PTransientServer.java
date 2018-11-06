@@ -63,19 +63,21 @@ public class P2PTransientServer {
                 sendP2PResponse(client, buffer);
                 flag = 1;
 
-            } else if (msgType.equals(Constant.COMMAND_IPCONFIG)) { // it is an IPCONFIG command
-                try {
-                    Ipconfig ipconfig = STUNClient.getPubIpconfig();
-                    String ip = ipconfig.getIp();
-                    String port = ipconfig.getPort();
-                    String ipReply = ip + ":" + port;
-                    byte[] buffer = ipReply.getBytes();
-                    sendP2PResponse(client, buffer);
-                } catch (Exception e) {
-                    System.out.println("cannot contact STUN server");
-                }
-
-            } else if (msgType.equals(Constant.COMMAND_QUERY)) { // it is a download request
+            }
+            // This command is disabled due to symmetric network
+            // else if (msgType.equals(Constant.COMMAND_IPCONFIG)) {
+            //     try {
+            //         Ipconfig ipconfig = STUNClient.getPubIpconfig();
+            //         String ip = ipconfig.getIp();
+            //         String port = ipconfig.getPort();
+            //         String ipReply = ip + ":" + port;
+            //         byte[] buffer = ipReply.getBytes();
+            //         sendP2PResponse(client, buffer);
+            //     } catch (Exception e) {
+            //         System.out.println("cannot contact STUN server");
+            //     }
+            // }
+            else if (msgType.equals(Constant.COMMAND_QUERY)) { // it is a download request
                 fileName = br.readLine();
                 chunkNumString = br.readLine();
                 chunkNum = Integer.parseInt(chunkNumString);
