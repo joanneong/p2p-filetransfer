@@ -1,7 +1,6 @@
 import java.io.BufferedOutputStream;
-import java.io.BufferedReader;
 import java.io.FileOutputStream;
-import java.io.FileReader;
+import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.Socket;
@@ -224,23 +223,14 @@ public class P2PClient {
     }
 
     private int getNumberOfChunks(String fileName) throws IOException {
+        File f = new File(Constant.DEFAULT_DIRECTORY + fileName);
+        int fileLength = (int) f.length();
 
-        BufferedReader br;
-        try {
-            br = new BufferedReader(new FileReader(Constant.DEFAULT_DIRECTORY + fileName));
-        } catch (IOException e) {
-            return -1;
+        int chunkCount = fileLength / Constant.CHUNK_SIZE;
+
+        if (fileLength > (chunkCount * Constant.CHUNK_SIZE)) {
+            chunkCount = chunkCount + 1;
         }
-
-        char[] buffer = new char[1024];
-
-        int chunkCount = 0;
-        while (br.read(buffer) != -1) {
-            //System.out.println("Is counting...");
-            chunkCount++;
-        }
-
-        br.close();
 
         return chunkCount;
     }
