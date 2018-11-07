@@ -7,7 +7,6 @@ public class Constant {
 
     public static final String LOCALHOST_IP = "localhost";
     public static final int DIR_SERVER_PORT = 9090;
-    public static final int P2P_SERVER_PORT = 9019;
 
     public static final int CHUNK_SIZE = 1024;
 

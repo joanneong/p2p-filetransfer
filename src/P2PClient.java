@@ -6,8 +6,9 @@ import java.io.PrintWriter;
 import java.net.Socket;
 import java.util.Scanner;
 
-public class P2PClient {
+public class P2PClient implements Runnable {
 
+    Socket serverSocket;
     Socket clientSocket;
 
     PrintWriter pw;
@@ -76,25 +77,19 @@ public class P2PClient {
                 break;
             }
 
-            // Get IP address of P2P server
-            int i;
-            for (i = 0; i < messageReceived.length() - 10; i++) {
-                if (messageReceived.substring(i, i + 10).equals("P2P server")) {
-                    i = i + 12;
-                    break;
-                }
-            }
-            String p2pServerIP = messageReceived.substring(i, messageReceived.length() - 2);
+            String toServer = Constant.COMMAND_DOWNLOAD + Constant.MESSAGE_DELIMITER
+                    + fileName + Constant.MESSAGE_DELIMITER
+                    + chunkNumber + Constant.MESSAGE_DELIMITER;
+            pw.println(toServer);
+            pw.flush();
 
-            // Get port number of P2P server
-            int p2pServerPort = Constant.P2P_SERVER_PORT;
+            sc.nextLine();
 
-            Socket socketToP2PServer = connectToServer(p2pServerIP, p2pServerPort);
+            byte[] buffer = new byte[Constant.CHUNK_SIZE];
+            int bytesRead = clientSocket.getInputStream().read(buffer);
 
-            sendQueryToP2PServer(fileName, chunkNumber, socketToP2PServer);
-            receiveDataFromP2PServer(bos, socketToP2PServer);
-
-            socketToP2PServer.close();
+            bos.write(buffer, 0, bytesRead);
+            bos.flush();
 
             getInformMessage(fileName, chunkNumber);
 
@@ -138,7 +133,7 @@ public class P2PClient {
         return replyMessage.toString();
     }
 
-    private String getExitMessage() throws IOException {
+    private String getExitMessage() {
 
         String toServer = Constant.COMMAND_EXIT;
         pw.println(toServer);
@@ -147,50 +142,11 @@ public class P2PClient {
         messageReceived =  sc.nextLine();
         sc.nextLine();
 
-        sendExitToOwnServer();
-
         return messageReceived + Constant.MESSAGE_DELIMITER;
-    }
-
-    private void sendExitToOwnServer() throws IOException {
-
-        Socket socketToOwnServer = connectToServer(Constant.LOCALHOST_IP, Constant.P2P_SERVER_PORT);
-
-        PrintWriter writerToOwnServer = new PrintWriter(socketToOwnServer.getOutputStream(), true);
-        writerToOwnServer.println(Constant.COMMAND_EXIT);
-        writerToOwnServer.flush();
-
-        Scanner scFromOwnServer = new Scanner(socketToOwnServer.getInputStream());
-        if (!scFromOwnServer.nextLine().equals(Constant.MESSAGE_ACK)) {
-            System.out.println(Constant.ERROR_OWN_SERVER_NOT_CLOSED);
-        }
-
-        scFromOwnServer.close();
-        socketToOwnServer.close();
     }
 
     private Socket connectToServer(String p2pServerIP, int p2pServerPort) throws IOException {
         return new Socket(p2pServerIP, p2pServerPort);
-    }
-
-    private void receiveDataFromP2PServer(BufferedOutputStream bos, Socket socketToP2PServer) throws IOException {
-
-        byte[] buffer = new byte[Constant.CHUNK_SIZE];
-        int bytesRead = socketToP2PServer.getInputStream().read(buffer);
-
-        bos.write(buffer, 0, bytesRead);
-        bos.flush();
-    }
-
-    private void sendQueryToP2PServer(String fileName, int chunkNumber, Socket socketToP2PServer) throws IOException {
-
-        PrintWriter writerToP2PServer = new PrintWriter(socketToP2PServer.getOutputStream(), true);
-
-        String toP2PServer = Constant.COMMAND_QUERY + Constant.MESSAGE_DELIMITER
-                + fileName + Constant.MESSAGE_DELIMITER
-                + chunkNumber + Constant.MESSAGE_DELIMITER;
-        writerToP2PServer.println(toP2PServer);
-        writerToP2PServer.flush();
     }
 
     private int getNumberOfChunks(String fileName) {
@@ -209,9 +165,16 @@ public class P2PClient {
 
     private void start(String serverIP, int serverPort) throws IOException {
 
-        // Create a client socket and connect to the server
+        // Create a client socket and connect to the directory server
         clientSocket = connectToServer(serverIP, serverPort);
-        System.out.println("Connected to directory server: " + serverIP + " at port " + serverPort);
+        System.out.println("P2P client connected to directory server: " + serverIP + " at port " + serverPort);
+
+        // Create a transient server socket and connect to the directory server
+        serverSocket = connectToServer(serverIP, serverPort);
+        System.out.println("P2P transient server connected to directory server: " + serverIP + " at port " + serverPort + Constant.MESSAGE_DELIMITER);
+        
+        P2PTransientServer transientServer = new P2PTransientServer(serverSocket);
+        new Thread((Runnable) transientServer).start();
 
         // Read user input from keyboard
         Scanner scanner = new Scanner(System.in);
@@ -310,6 +273,11 @@ public class P2PClient {
         } catch (IOException ioe) {
             ioe.printStackTrace();
         }
+    }
+
+    @Override
+    public void run() {
+
     }
 
 }

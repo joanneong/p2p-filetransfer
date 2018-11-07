@@ -1,144 +1,54 @@
-import java.io.BufferedReader;
 import java.io.DataOutputStream;
-import java.io.File;
-import java.io.InputStreamReader;
 import java.io.IOException;
 import java.io.RandomAccessFile;
-import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.Arrays;
+import java.util.Scanner;
 
-public class P2PTransientServer implements Runnable {
+public class P2PTransientServer {
 
-    private Socket acceptedConnectionSocket;
+    Socket serverSocket;
 
-    /**
-     * Constructors
-     */
-    public P2PTransientServer() {
-
+    public P2PTransientServer(Socket socket) {
+        serverSocket = socket;
     }
 
-    public P2PTransientServer(Socket connectionSocket) {
-        acceptedConnectionSocket = connectionSocket;
-    }
-
-    public static void main(String[] args) {
-        new File(Constant.DEFAULT_DIRECTORY).mkdirs();
-
-        P2PTransientServer serverInstance = new P2PTransientServer();
-        serverInstance.start(Constant.P2P_SERVER_PORT);
-    }
-
-    private void start(int port) {
+    public void start() {
 
         try{
-            ServerSocket welcomeSocket = new ServerSocket (port);
-            System.out.println("P2P transient server running on port 9019...\n");
+            Scanner fromClient = new Scanner(serverSocket.getInputStream());
+
+            String messageReceived = fromClient.nextLine();
 
             while (true) {
-                Socket connectionSocket = welcomeSocket.accept();
+                // print public IP address of the client requesting for data
+                System.out.println("Data requested by " + messageReceived);
 
-                P2PTransientServer newServerInstance = new P2PTransientServer(connectionSocket);
-                new Thread(newServerInstance).start();
+                String[] temp = fromClient.nextLine().split(":");
+                String fileName = temp[0];
+                int chunkNumber = Integer.parseInt(temp[1]);
+
+                fromClient.nextLine();
+
+                byte[] messageRequested = getRequestMessage(fileName, chunkNumber);
+                sendP2PResponse(serverSocket, messageRequested);
+
+                messageReceived = fromClient.nextLine();
             }
+
+            // System.out.println("P2P transient server closed. Goodbye!");
 
         } catch (IOException ioe) {
             System.out.println(ioe.getMessage());
         }
     }
 
-    @Override
-    public void run() {
-        System.out.println("New thread created to entertain the client " + clientIp(acceptedConnectionSocket));
-        boolean isExit = handleClientSocket(acceptedConnectionSocket);
-        System.out.println(clientIp(acceptedConnectionSocket) + " exits...\n");
-        if (isExit) {
-
-            // Print GoodBye message and exit the program with client
-            System.out.println("P2P transient server closed. Goodbye!");
-            System.exit(0);
-        }
-    }
-
-    /**
-     * Handles requests sent by a client
-     * @param  client Socket that handles the client connection
-     * @return a boolean that shows whether we want to close this server.
-     */
-    private boolean handleClientSocket(Socket client) {
-
-        InputStreamReader isr;
-        BufferedReader br;
-
-        String msgType;
-        String fileName;
-        String chunkNumString;
-        int chunkNum;
-
-        boolean isExit = false;
-
-        try {
-            isr = new InputStreamReader(client.getInputStream());
-            br = new BufferedReader(isr);
-            msgType = br.readLine();
-
-            if (msgType.equals(Constant.COMMAND_EXIT)) {
-
-                byte[] buffer = Constant.MESSAGE_ACK.getBytes();
-                System.out.println("Requested to exit by own client");
-                sendP2PResponse(client, buffer);
-                isExit = true;
-
-            } else if (msgType.equals(Constant.COMMAND_QUERY)) {
-
-                fileName = br.readLine();
-                chunkNumString = br.readLine();
-                chunkNum = Integer.parseInt(chunkNumString);
-
-                sendP2PResponse(client, formP2PResponse(fileName, chunkNum));
-            }
-
-            client.close();
-
-        } catch (IOException ioe) {
-            System.out.println(ioe.getMessage());
-        }
-
-        return isExit;
-    }
-
-    /**
-     * Sends a response back to the client
-     * @param  client Socket that handles the client connection
-     * @param  response The response to be sent to the client
-     */
-    private void sendP2PResponse(Socket client, byte[] response) {
-	  try {
-          DataOutputStream output = new DataOutputStream(client.getOutputStream());
-          output.write(response);
-          output.flush();
-
-          output.close();
-      } catch (IOException ioe) {
-          System.out.println(ioe.getMessage());
-      }
-    }
-
-    /**
-     * Form a response to a P2PRequest
-     * @param  fileName The name of file being requested
-     * @param  chunkNum The chunk number of the file
-     * @return a byte[] that contains the data to be sent to the client
-     */
-    private byte[] formP2PResponse(String fileName, int chunkNum) {
+    private byte[] getRequestMessage(String fileName, int chunkNum) {
 
         int bytesRead; // the number of bytes read by buffer
 
         try{
-            String directoryPath = Constant.DEFAULT_DIRECTORY;
-
-            RandomAccessFile file = new RandomAccessFile(directoryPath + fileName, "r");
+            RandomAccessFile file = new RandomAccessFile(Constant.DEFAULT_DIRECTORY + fileName, "r");
             file.seek(Constant.CHUNK_SIZE * (chunkNum - 1)); // move the pointer to the position where we start reading
             byte[] buffer = new byte[Constant.CHUNK_SIZE];
             bytesRead = file.read(buffer);
@@ -159,8 +69,18 @@ public class P2PTransientServer implements Runnable {
         }
     }
 
-    private String clientIp(Socket socket) {
-        return socket.getInetAddress().toString() + ":" + socket.getPort();
+    private void sendP2PResponse(Socket serverSocket, byte[] response) {
+	  try {
+	      DataOutputStream toClient = new DataOutputStream(serverSocket.getOutputStream());
+          toClient.write(response);
+          toClient.flush();
+
+          System.out.println("Data requested has been sent" + Constant.MESSAGE_DELIMITER);
+
+          toClient.close();
+      } catch (IOException ioe) {
+          System.out.println(ioe.getMessage());
+      }
     }
 
 }
