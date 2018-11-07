@@ -13,8 +13,6 @@ public class P2PTransientServer implements Runnable {
 
     private Socket acceptedClientSocket = null;
 
-    private boolean running = true;
-
     public P2PTransientServer(Socket acceptedClientSocket) {
         this.acceptedClientSocket = acceptedClientSocket;
     }
@@ -27,7 +25,7 @@ public class P2PTransientServer implements Runnable {
             ServerSocket welcomeSocket = new ServerSocket (port);
             System.out.println("P2P transient server running on port 9019...");
 
-            while (running) {
+            while (true) {
                 Socket connectionSocket = welcomeSocket.accept();
                 P2PTransientServer newServer = new P2PTransientServer(connectionSocket);
                 new Thread(newServer).start();
@@ -36,10 +34,6 @@ public class P2PTransientServer implements Runnable {
         } catch (IOException ioe) {
             System.out.println(ioe.getMessage());
         }
-    }
-
-    public void exit() {
-        running = false;
     }
 
     @Override

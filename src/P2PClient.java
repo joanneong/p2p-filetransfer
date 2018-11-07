@@ -331,8 +331,8 @@ public class P2PClient implements Runnable {
             P2PClient client = new P2PClient(serverInstance);
             client.start(serverIP, serverPort);
 
-            client.transientServer.exit();
-            System.out.println("here");
+            // Exit the program
+            System.exit(0);
 
         } catch (IOException e) {
             e.printStackTrace();
