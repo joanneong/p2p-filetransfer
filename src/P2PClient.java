@@ -91,6 +91,8 @@ public class P2PClient implements Runnable {
             bos.write(buffer, 0, bytesRead);
             bos.flush();
 
+            System.out.println("Downloaded " + fileName + " chunk " + chunkNumber);
+
             chunkNumber++;
         }
 

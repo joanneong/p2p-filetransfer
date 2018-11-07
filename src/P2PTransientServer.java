@@ -33,6 +33,8 @@ public class P2PTransientServer {
                 byte[] messageRequested = getRequestMessage(fileName, chunkNumber);
                 sendP2PResponse(serverSocket, messageRequested);
 
+                System.out.println("Sent " + fileName + " chunk " + chunkNumber);
+
                 messageReceived = fromClient.nextLine();
             }
 
