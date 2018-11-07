@@ -197,7 +197,7 @@ public class P2PClient implements Runnable {
                     chunkNumber = getNumberOfChunks(fileName);
                     System.out.println("Number of chunks: " + chunkNumber);
 
-                    if (chunkNumber == -1) {
+                    if (chunkNumber <= 0) {
                         System.out.println(Constant.ERROR_INFORM_FILE_NOT_EXIST);
                         break;
                     }
