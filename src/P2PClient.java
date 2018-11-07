@@ -91,8 +91,6 @@ public class P2PClient implements Runnable {
             bos.write(buffer, 0, bytesRead);
             bos.flush();
 
-            getInformMessage(fileName, chunkNumber);
-
             chunkNumber++;
         }
 
@@ -102,6 +100,10 @@ public class P2PClient implements Runnable {
             File file = new File(Constant.DEFAULT_DIRECTORY + fileName);
             file.delete();
             return Constant.ERROR_DOWNLOAD_FILE_NOT_EXIST;
+        }
+
+        for (int i = 1; i <= chunkNumber - 1; i++) {
+            getInformMessage(fileName, i);
         }
         return "File " + fileName + " downloaded from peer server" + Constant.MESSAGE_DELIMITER;
     }
