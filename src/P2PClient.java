@@ -96,6 +96,8 @@ public class P2PClient {
 
             socketToP2PServer.close();
 
+            System.out.println("Downloaded " + fileName + " chunk " + chunkNumber);
+
             chunkNumber++;
         }
 

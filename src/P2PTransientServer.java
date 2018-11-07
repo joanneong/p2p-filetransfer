@@ -52,7 +52,6 @@ public class P2PTransientServer implements Runnable {
     public void run() {
         System.out.println("New thread created to entertain the client " + clientIp(acceptedConnectionSocket));
         boolean isExit = handleClientSocket(acceptedConnectionSocket);
-        System.out.println(clientIp(acceptedConnectionSocket) + " exits...\n");
         if (isExit) {
 
             // Print GoodBye message and exit the program with client
@@ -97,6 +96,7 @@ public class P2PTransientServer implements Runnable {
                 chunkNum = Integer.parseInt(chunkNumString);
 
                 sendP2PResponse(client, formP2PResponse(fileName, chunkNum));
+                System.out.println("Sent " + fileName + " chunk " + chunkNum);
             }
 
             client.close();
