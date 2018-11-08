@@ -41,9 +41,9 @@ public class DirectoryServer implements Runnable {
         return Constant.MESSAGE_ACK + Constant.MESSAGE_DELIMITER;
     }
 
-    private String getQueryReplyMessage(String filename, int chunkNumber) {
+    private String getQueryReplyMessage(String filename) {
 
-        Chunk chunk = new Chunk(filename, chunkNumber);
+        Chunk chunk = new Chunk(filename, 1);
         String message = Constant.MESSAGE_REPLY + Constant.MESSAGE_DELIMITER;
 
         List<Host> listOfHosts = firstTable.get(chunk);
@@ -55,10 +55,9 @@ public class DirectoryServer implements Runnable {
 
         } else {
 
-            System.out.println("Chunk No." + chunkNumber + " for file " + filename + " exists!");
+            System.out.println(filename + " exists!");
 
-            int randomNumber = (int) (Math.random() * listOfHosts.size());
-            Host randomlySelectedHost = listOfHosts.get(randomNumber);
+            Host randomlySelectedHost = getRandomHost(listOfHosts);
 
             return message
                     + randomlySelectedHost.getTransientServerSocket().getInetAddress()
@@ -67,6 +66,11 @@ public class DirectoryServer implements Runnable {
                     + Constant.MESSAGE_DELIMITER;
         }
 
+    }
+
+    private Host getRandomHost(List<Host> listOfHosts) {
+        int randomNumber = (int) (Math.random() * listOfHosts.size());
+        return listOfHosts.get(randomNumber);
     }
 
     private String getListReplyMessage() {
@@ -221,9 +225,8 @@ public class DirectoryServer implements Runnable {
 
             case Constant.COMMAND_QUERY:
                 String filename2 = parsedClientMsg[1];
-                int chunkNumber2 = Integer.parseInt(parsedClientMsg[2]);
 
-                returnMessage = getQueryReplyMessage(filename2, chunkNumber2);
+                returnMessage = getQueryReplyMessage(filename2);
                 break;
 
             case Constant.COMMAND_LIST:
