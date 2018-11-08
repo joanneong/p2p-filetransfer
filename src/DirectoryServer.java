@@ -45,9 +45,9 @@ public class DirectoryServer implements Runnable {
 
         String message = Constant.MESSAGE_REPLY + Constant.MESSAGE_DELIMITER;
 
-        List<Host> listOfHosts = getHostsOfChunk(filename, 1);
+        Host randomlySelectedHost = getRandomHost(filename, 1);
 
-        if (listOfHosts == null || listOfHosts.isEmpty()) {
+        if (randomlySelectedHost == null) {
 
             // Chunk requested does not exist
             return message + Constant.MESSAGE_CHUNK_NOT_EXIST + Constant.MESSAGE_DELIMITER;
@@ -55,8 +55,6 @@ public class DirectoryServer implements Runnable {
         } else {
 
             System.out.println(filename + " exists!");
-
-            Host randomlySelectedHost = getRandomHost(listOfHosts);
 
             return message
                     + randomlySelectedHost.getTransientServerSocket().getInetAddress()
@@ -72,7 +70,8 @@ public class DirectoryServer implements Runnable {
         return firstTable.get(chunk);
     }
 
-    private Host getRandomHost(List<Host> listOfHosts) {
+    private Host getRandomHost(String filename, int chunk) {
+        List<Host> listOfHosts = getHostsOfChunk(filename, chunk);
         int randomNumber = (int) (Math.random() * listOfHosts.size());
         return listOfHosts.get(randomNumber);
     }
@@ -108,16 +107,17 @@ public class DirectoryServer implements Runnable {
      * Send TCP message to client
      */
     private void send(Socket client, String messageToSend) {
+
+        // Empty message won't be sent
+        if(messageToSend.isEmpty()) {
+            return;
+        }
+        
         try {
             System.out.println("Server is sending client: " + messageToSend);
             PrintWriter writer = new PrintWriter(client.getOutputStream(), true);
             writer.println(messageToSend);
-
-            if (messageToSend.contains(Constant.MESSAGE_GOODBYE)) {
-                System.out.println("Closing the client socket...");
-                client.close();
-                System.out.println("Client is closed: " + client.isClosed());
-            }
+            writer.close();
         } catch (IOException ioe) {
             System.err.println(ioe.getMessage());
         }
@@ -223,7 +223,7 @@ public class DirectoryServer implements Runnable {
 
         String type = parsedClientMsg[0];
         System.out.println("Client message has type: " + type);
-        String returnMessage = "";
+        String returnMessage;
 
         switch(type) {
             case Constant.COMMAND_NAME:
@@ -250,8 +250,9 @@ public class DirectoryServer implements Runnable {
             case Constant.COMMAND_DOWNLOAD:
                 String filename2 = parsedClientMsg[1];
 
-                returnMessage += getNumOfChunk(filename2);
                 handleDownloadFile(filename2);
+
+                returnMessage = ""; // Empty message won't be sent
                 break;
 
             case Constant.COMMAND_LIST:
@@ -259,8 +260,11 @@ public class DirectoryServer implements Runnable {
                 break;
 
             case Constant.COMMAND_EXIT:
-                handleExitMsg();
+                // Send good bye message first
                 returnMessage = getGoodbyeMessage();
+
+                // Then close the socket
+                handleExitMsg();
                 break;
 
             default:
@@ -282,9 +286,29 @@ public class DirectoryServer implements Runnable {
         }
     }
 
-    private void handleDownloadFile(String fileName) {
+    private void handleDownloadFile(String filename) {
+        // Send number of chunk to client
+        int numOfChunk = getNumOfChunk(filename);
+        send(acceptedSocket, "" + numOfChunk);
 
-        
+        for(int i = 1; i <= numOfChunk; i++) {
+            // Pick a host that have the chunk of the file
+            Host randomlySelectedHost = getRandomHost(filename, i);
+            Socket transientSocket = randomlySelectedHost.getTransientServerSocket();
+
+            // Send DOWNLOAD command to the transient server
+            String command = Constant.COMMAND_DOWNLOAD + Constant.MESSAGE_DELIMITER
+                             + filename + Constant.MESSAGE_DELIMITER
+                             + i + Constant.MESSAGE_DELIMITER
+                             + uniqueName + Constant.MESSAGE_DELIMITER;
+            send(transientSocket, command);
+
+            // Receive data from transient server todo
+
+            // Send data back to client todo
+
+        }
+
     }
 
     private String getMsgFromClient(Socket client) {
@@ -444,7 +468,6 @@ public class DirectoryServer implements Runnable {
             } else {
                 System.err.println("Transient socket already exists!");
             }
-
         }
 
         @Override
