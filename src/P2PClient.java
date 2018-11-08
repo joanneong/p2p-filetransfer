@@ -276,8 +276,8 @@ public class P2PClient {
 
     public static void main(String[] args) {
 
-        // Check if the number of command line argument is 2
-        if (args.length != 2) {
+        // Check if the number of command line argument is 3
+        if (args.length != 3) {
             System.err.println("Usage: java P2PClient directoryServerIP directoryServerPort uniqueName");
             System.exit(1);
         }
