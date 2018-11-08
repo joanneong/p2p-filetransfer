@@ -119,7 +119,7 @@ public class DirectoryServer implements Runnable {
 
         Host host = hosts.get(uniqueName);
         if(host == null || uniqueName == null) {
-            System.err.println();
+            System.err.println("Host does not exist");
         }
         Chunk chunk = new Chunk(filename, chunkNumber);
 
@@ -372,7 +372,7 @@ public class DirectoryServer implements Runnable {
                 this.uniqueName = uniqueName;
                 System.out.println("Unique name is set: " + uniqueName);
             } else {
-                System.err.println("Unique name already set");
+                System.err.println("Unique name already set!");
             }
         }
 
