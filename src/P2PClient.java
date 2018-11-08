@@ -6,9 +6,13 @@ import java.io.PrintWriter;
 import java.net.Socket;
 import java.util.Scanner;
 
-public class P2PClient implements Runnable {
+public class P2PClient {
 
-    Socket serverSocket;
+    String directoryServerIP;
+    int directoryServerPort;
+    String uniqueName;
+
+    Socket transientServerSocket;
     Socket clientSocket;
 
     PrintWriter pw;
@@ -16,7 +20,46 @@ public class P2PClient implements Runnable {
 
     String messageReceived;
 
-    private String getInformMessage(String fileName, int chunkNumber) {
+    // Constructor function for a new P2P client
+    P2PClient(String directoryServerIP, int directoryServerPort, String uniqueName) {
+        this.directoryServerIP = directoryServerIP;
+        this.directoryServerPort = directoryServerPort;
+        this.uniqueName = uniqueName;
+    }
+
+    // Send a P2P client's unique name to the directory server during the initial connection
+    private void sendNameMessage() {
+        String toServer = Constant.COMMAND_NAME + Constant.MESSAGE_DELIMITER
+                + uniqueName + Constant.MESSAGE_DELIMITER
+                + Constant.TYPE_CLIENT_SOCKET + Constant.MESSAGE_DELIMITER;
+        pw.println(toServer);
+        pw.flush();
+
+        sc.nextLine();
+        messageReceived = sc.nextLine();
+
+        if (messageReceived.equals(Constant.MESSAGE_ACK)) {
+            System.out.println("Unique name " + uniqueName + " successfully sent from client to directory server!");
+        } else {
+            System.err.println("Error: could not send unique name " + uniqueName + " to directory server!");
+        }
+    }
+
+    // Get the total number of chunks in a file
+    private int getNumberOfChunks(String fileName) {
+
+        File f = new File(Constant.DEFAULT_DIRECTORY + fileName);
+        int fileLength = (int) f.length();
+        int chunkCount = fileLength / Constant.CHUNK_SIZE;
+
+        if (fileLength > (chunkCount * Constant.CHUNK_SIZE)) {
+            chunkCount = chunkCount + 1;
+        }
+        return chunkCount;
+    }
+
+    // Inform the directory server that the client owns a file and chunk
+    private String sendInformMessage(String fileName, int chunkNumber) {
 
         String toServer = Constant.COMMAND_INFORM + Constant.MESSAGE_DELIMITER
                 + fileName + Constant.MESSAGE_DELIMITER
@@ -35,7 +78,8 @@ public class P2PClient implements Runnable {
         }
     }
 
-    private String getQueryMessage(String fileName, int chunkNumber) {
+    // Ask the directory server for a list of public IP addresses of peers who own the file
+    private String sendQueryMessage(String fileName, int chunkNumber) {
 
         String toServer = Constant.COMMAND_QUERY + Constant.MESSAGE_DELIMITER
                 + fileName + Constant.MESSAGE_DELIMITER
@@ -58,59 +102,58 @@ public class P2PClient implements Runnable {
         }
     }
 
-    private String getDownloadMessage(String fileName) throws IOException {
+    // Download a file from another peer via the directory server
+    private String sendDownloadMessage(String fileName) throws IOException {
 
+        // Check if the client already owns the file
         boolean isExist = new File(Constant.DEFAULT_DIRECTORY + fileName).exists();
         if (isExist) {
             return Constant.ERROR_DOWNLOAD_FILE_EXIST;
         }
 
+        String toServer = Constant.COMMAND_DOWNLOAD + Constant.MESSAGE_DELIMITER
+                + fileName + Constant.MESSAGE_DELIMITER;
+        pw.println(toServer);
+        pw.flush();
+
+        // Get the total number of chunks to expect from the directory server
+        sc.nextLine();
+        messageReceived = sc.nextLine();
+        int totalChunksToReceive = Integer.parseInt(messageReceived);
+
+        // Check if the file exists (to the directory server's knowledge)
+        if (totalChunksToReceive == 0) {
+            File file = new File(Constant.DEFAULT_DIRECTORY + fileName);
+            file.delete();
+            return Constant.ERROR_DOWNLOAD_FILE_NOT_EXIST;
+        }
+
+        // Prepare to write received file contents
         FileOutputStream fos = new FileOutputStream(Constant.DEFAULT_DIRECTORY + fileName);
         BufferedOutputStream bos = new BufferedOutputStream(fos);
 
-        int chunkNumber = 1;
-
-        while (true) {
-            messageReceived = getQueryMessage(fileName, chunkNumber);
-
-            if (messageReceived.equals(Constant.ERROR_QUERY_FILE_NOT_EXIST)) {
-                break;
-            }
-
-            String toServer = Constant.COMMAND_DOWNLOAD + Constant.MESSAGE_DELIMITER
-                    + fileName + Constant.MESSAGE_DELIMITER
-                    + chunkNumber + Constant.MESSAGE_DELIMITER;
-            pw.println(toServer);
-            pw.flush();
-
-            sc.nextLine();
-
+        // Write file contents to new file
+        for (int i = 1; i <= totalChunksToReceive; i++) {
             byte[] buffer = new byte[Constant.CHUNK_SIZE];
             int bytesRead = clientSocket.getInputStream().read(buffer);
 
             bos.write(buffer, 0, bytesRead);
             bos.flush();
 
-            System.out.println("Downloaded " + fileName + " chunk " + chunkNumber);
-
-            chunkNumber++;
+            System.out.println("Downloaded " + fileName + " chunk " + i);
         }
 
         bos.close();
 
-        if (chunkNumber == 1) {
-            File file = new File(Constant.DEFAULT_DIRECTORY + fileName);
-            file.delete();
-            return Constant.ERROR_DOWNLOAD_FILE_NOT_EXIST;
-        }
-
-        for (int i = 1; i <= chunkNumber - 1; i++) {
-            getInformMessage(fileName, i);
+        // Only inform the directory server after the whole file has been downloaded
+        for (int i = 1; i <= totalChunksToReceive; i++) {
+            sendInformMessage(fileName, i);
         }
         return "File " + fileName + " downloaded from peer server" + Constant.MESSAGE_DELIMITER;
     }
 
-    private String getListMessage() {
+    // Get a list of all available files from the directory server
+    private String sendListMessage() {
 
         String toServer = Constant.COMMAND_LIST;
         pw.println(toServer);
@@ -137,55 +180,29 @@ public class P2PClient implements Runnable {
         return replyMessage.toString();
     }
 
-    private String getExitMessage() {
-
+    // Send exit message to the directory server
+    private void sendExitMessage() {
         String toServer = Constant.COMMAND_EXIT;
         pw.println(toServer);
         pw.flush();
-
-        messageReceived =  sc.nextLine();
-        sc.nextLine();
-
-        return messageReceived + Constant.MESSAGE_DELIMITER;
     }
 
-    private Socket connectToServer(String p2pServerIP, int p2pServerPort) throws IOException {
-        return new Socket(p2pServerIP, p2pServerPort);
-    }
-
-    private int getNumberOfChunks(String fileName) {
-
-        File f = new File(Constant.DEFAULT_DIRECTORY + fileName);
-        int fileLength = (int) f.length();
-
-        int chunkCount = fileLength / Constant.CHUNK_SIZE;
-
-        if (fileLength > (chunkCount * Constant.CHUNK_SIZE)) {
-            chunkCount = chunkCount + 1;
-        }
-
-        return chunkCount;
-    }
-
-    private void start(String serverIP, int serverPort) throws IOException {
+    private void start() throws IOException {
 
         // Create a client socket and connect to the directory server
-        clientSocket = connectToServer(serverIP, serverPort);
-        System.out.println("P2P client connected to directory server: " + serverIP + " at port " + serverPort);
+        clientSocket = new Socket(directoryServerIP, directoryServerPort);
+        System.out.println("P2P client connected to directory server: " + directoryServerIP + " at port " + directoryServerPort);
 
-        // Create a transient server socket and connect to the directory server
-        serverSocket = connectToServer(serverIP, serverPort);
-        System.out.println("P2P transient server connected to directory server: " + serverIP + " at port " + serverPort + Constant.MESSAGE_DELIMITER);
-        
-        P2PTransientServer transientServer = new P2PTransientServer(serverSocket);
-        new Thread((Runnable) transientServer).start();
+        // Open writer and scanner between p2p client and directory server
+        pw = new PrintWriter(clientSocket.getOutputStream(), true);
+        sc = new Scanner(clientSocket.getInputStream());
+
+        // Inform the directory server that this connection is to a P2P client
+        sendNameMessage();
 
         // Read user input from keyboard
         Scanner scanner = new Scanner(System.in);
         String fromClient = scanner.next();
-
-        pw = new PrintWriter(clientSocket.getOutputStream(), true);
-        sc = new Scanner(clientSocket.getInputStream());
 
         String fileName;
         String replyMessage;
@@ -195,50 +212,48 @@ public class P2PClient implements Runnable {
             switch (fromClient.toUpperCase()) {
                 case Constant.COMMAND_INFORM:
                     fileName = scanner.next();
-                    System.out.println("File name: " + fileName);
                     chunkNumber = getNumberOfChunks(fileName);
-                    System.out.println("Number of chunks: " + chunkNumber);
+
+                    System.out.println("Attempting to inform " + fileName + " with no. of chunks: " + chunkNumber);
 
                     if (chunkNumber <= 0) {
                         System.out.println(Constant.ERROR_INFORM_FILE_NOT_EXIST);
                         break;
                     }
 
-                    boolean isInformSuccess = true;
+                    replyMessage = "File " + fileName + "successfully informed to directory server";
+                    String tempMessage;
                     for (int i = 1; i <= chunkNumber; i++) {
-                        replyMessage = getInformMessage(fileName, i);
-                        if (replyMessage.equals(Constant.ERROR_CLIENT_INFORM_FAILED)) {
-                            System.out.println(replyMessage);
-                            isInformSuccess = false;
+                        tempMessage = sendInformMessage(fileName, i);
+                        if (tempMessage.equals(Constant.ERROR_CLIENT_INFORM_FAILED)) {
+                            replyMessage = Constant.ERROR_CLIENT_INFORM_FAILED;
                             break;
                         }
                     }
-                    if (isInformSuccess) {
-                        System.out.println("File " + fileName + " informed to directory server" + Constant.MESSAGE_DELIMITER);
-                    }
+                    System.out.println(replyMessage);
                     break;
 
                 case Constant.COMMAND_QUERY:
                     fileName = scanner.next();
                     chunkNumber = 1;
-                    replyMessage = getQueryMessage(fileName, chunkNumber);
+                    replyMessage = sendQueryMessage(fileName, chunkNumber);
                     System.out.println(replyMessage);
                     break;
 
                 case Constant.COMMAND_DOWNLOAD:
                     fileName = scanner.next();
-                    replyMessage = getDownloadMessage(fileName);
+                    replyMessage = sendDownloadMessage(fileName);
                     System.out.println(replyMessage);
                     break;
 
                 case Constant.COMMAND_LIST:
-                    replyMessage = getListMessage();
+                    replyMessage = sendListMessage();
                     System.out.println(replyMessage);
                     break;
 
                 case Constant.COMMAND_EXIT:
-                    replyMessage = getExitMessage();
-                    System.out.println(replyMessage);
+                    sendExitMessage();
+                    System.out.println(Constant.MESSAGE_GOODBYE);
                     break;
 
                 default:
@@ -250,9 +265,8 @@ public class P2PClient implements Runnable {
             if (fromClient.toUpperCase().equals(Constant.COMMAND_EXIT)) {
                 scanner.close();
                 sc.close();
-
+                pw.close();
                 clientSocket.close();
-
                 break;
             }
 
@@ -264,24 +278,20 @@ public class P2PClient implements Runnable {
 
         // Check if the number of command line argument is 2
         if (args.length != 2) {
-            System.err.println("Usage: java P2PClient serverIP serverPort");
+            System.err.println("Usage: java P2PClient directoryServerIP directoryServerPort uniqueName");
             System.exit(1);
         }
 
-        String serverIP = args[0];
-        int serverPort = Integer.parseInt(args[1]);
+        String directoryServerIP = args[0];
+        int directoryServerPort = Integer.parseInt(args[1]);
+        String uniqueName = args[2];
 
         try {
-            P2PClient client = new P2PClient();
-            client.start(serverIP, serverPort);
+            P2PClient client = new P2PClient(directoryServerIP, directoryServerPort, uniqueName);
+            client.start();
         } catch (IOException ioe) {
             ioe.printStackTrace();
         }
-    }
-
-    @Override
-    public void run() {
-
     }
 
 }
