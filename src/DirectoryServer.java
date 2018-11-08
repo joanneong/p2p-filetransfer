@@ -43,10 +43,9 @@ public class DirectoryServer implements Runnable {
 
     private String getQueryReplyMessage(String filename) {
 
-        Chunk chunk = new Chunk(filename, 1);
         String message = Constant.MESSAGE_REPLY + Constant.MESSAGE_DELIMITER;
 
-        List<Host> listOfHosts = firstTable.get(chunk);
+        List<Host> listOfHosts = getHostsOfChunk(filename, 1);
 
         if (listOfHosts == null || listOfHosts.isEmpty()) {
 
@@ -66,6 +65,11 @@ public class DirectoryServer implements Runnable {
                     + Constant.MESSAGE_DELIMITER;
         }
 
+    }
+
+    private List<Host> getHostsOfChunk(String filename, int chunkNum) {
+        Chunk chunk = new Chunk(filename, chunkNum);
+        return firstTable.get(chunk);
     }
 
     private Host getRandomHost(List<Host> listOfHosts) {
@@ -121,10 +125,7 @@ public class DirectoryServer implements Runnable {
 
     private void handleInformMsg(String filename, int chunkNumber) {
 
-        Host host = hosts.get(uniqueName);
-        if(host == null || uniqueName == null) {
-            System.err.println("Host does not exist");
-        }
+        Host host = getHostOfCurrentThread();
         Chunk chunk = new Chunk(filename, chunkNumber);
 
         //Add to the first table
@@ -144,11 +145,17 @@ public class DirectoryServer implements Runnable {
         secondTable.put(host, chunksOfTheHost);
     }
 
-    private void handleExitMsg(Socket client) {
+    private Host getHostOfCurrentThread() {
+        Host host = hosts.get(uniqueName);
+        if(host == null || uniqueName == null) {
+            System.err.println("Host does not exist");
+        }
+        return host;
+    }
 
-        String clientIpAddress = client.getInetAddress().toString();
-        int clientPort = Constant.P2P_SERVER_PORT;
-        Host clientHost = new Host(clientIpAddress, clientPort);
+    private void handleExitMsg() {
+
+        Host clientHost = getHostOfCurrentThread();
 
         List<Chunk> clientChunks = secondTable.get(clientHost);
 
@@ -169,6 +176,17 @@ public class DirectoryServer implements Runnable {
                 secondTable.remove(clientHost);
             }
         }
+
+        // Close sockets of client
+        try{
+            clientHost.getTransientServerSocket().close();
+            clientHost.getClientSocket().close();
+        } catch (IOException e) {
+            System.err.println(e.getMessage());
+        }
+
+        // Remove host from hosts table
+        hosts.remove(uniqueName);
     }
 
     private void handleNameMsg(Socket socket, String uniqueName, String type) {
@@ -205,7 +223,7 @@ public class DirectoryServer implements Runnable {
 
         String type = parsedClientMsg[0];
         System.out.println("Client message has type: " + type);
-        String returnMessage;
+        String returnMessage = "";
 
         switch(type) {
             case Constant.COMMAND_NAME:
@@ -224,9 +242,16 @@ public class DirectoryServer implements Runnable {
                 break;
 
             case Constant.COMMAND_QUERY:
+                String filename1 = parsedClientMsg[1];
+
+                returnMessage = getQueryReplyMessage(filename1);
+                break;
+
+            case Constant.COMMAND_DOWNLOAD:
                 String filename2 = parsedClientMsg[1];
 
-                returnMessage = getQueryReplyMessage(filename2);
+                returnMessage += getNumOfChunk(filename2);
+                handleDownloadFile(filename2);
                 break;
 
             case Constant.COMMAND_LIST:
@@ -234,7 +259,7 @@ public class DirectoryServer implements Runnable {
                 break;
 
             case Constant.COMMAND_EXIT:
-                handleExitMsg(client);
+                handleExitMsg();
                 returnMessage = getGoodbyeMessage();
                 break;
 
@@ -244,6 +269,22 @@ public class DirectoryServer implements Runnable {
 
         return returnMessage;
 
+    }
+
+    private int getNumOfChunk(String fileName) {
+        int chunk = 0;
+        while(true) {
+            if(!getHostsOfChunk(fileName, chunk + 1).isEmpty()) {
+                chunk++;
+            } else {
+                return chunk;
+            }
+        }
+    }
+
+    private void handleDownloadFile(String fileName) {
+
+        
     }
 
     private String getMsgFromClient(Socket client) {
