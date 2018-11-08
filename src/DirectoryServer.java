@@ -14,7 +14,10 @@ public class DirectoryServer implements Runnable {
 
     private HashMap<Chunk, List<Host>> firstTable;
     private HashMap<Host, List<Chunk>> secondTable;
-    private Socket acceptedClientSocket;
+    private Socket acceptedSocket;
+    private HashMap<String, Host> hosts;
+
+    private String uniqueName;
 
     /**
      * Constructors
@@ -22,14 +25,17 @@ public class DirectoryServer implements Runnable {
     public DirectoryServer() {
         this.firstTable = new HashMap<>();
         this.secondTable = new HashMap<>();
+        this.hosts = new HashMap<>();
     }
 
-    public DirectoryServer(Socket acceptedClientSocket, HashMap<Chunk, List<Host>> firstTable,
+    public DirectoryServer(Socket acceptedSocket, HashMap<Chunk, List<Host>> firstTable,
                            HashMap<Host, List<Chunk>> secondTable) {
-        this.acceptedClientSocket = acceptedClientSocket;
+        this.acceptedSocket = acceptedSocket;
         this.firstTable = firstTable;
         this.secondTable = secondTable;
     }
+
+
 
     private String getAckMessage() {
         return Constant.MESSAGE_ACK + Constant.MESSAGE_DELIMITER;
@@ -54,8 +60,11 @@ public class DirectoryServer implements Runnable {
             int randomNumber = (int) (Math.random() * listOfHosts.size());
             Host randomlySelectedHost = listOfHosts.get(randomNumber);
 
-            return message + randomlySelectedHost.getIPAddress() + Constant.MESSAGE_DELIMITER
-                    + randomlySelectedHost.getPortNumber() + Constant.MESSAGE_DELIMITER;
+            return message
+                    + randomlySelectedHost.getTransientServerSocket().getInetAddress()
+                    + Constant.MESSAGE_DELIMITER
+                    + randomlySelectedHost.getTransientServerSocket().getPort()
+                    + Constant.MESSAGE_DELIMITER;
         }
 
     }
@@ -106,10 +115,12 @@ public class DirectoryServer implements Runnable {
         }
     }
 
-    private void handleInformMsg(String filename, int chunkNumber,
-                                 String clientPublicIp, int clientPublicPort) {
+    private void handleInformMsg(String filename, int chunkNumber) {
 
-        Host host = new Host(clientPublicIp, clientPublicPort);
+        Host host = hosts.get(uniqueName);
+        if(host == null || uniqueName == null) {
+            System.err.println();
+        }
         Chunk chunk = new Chunk(filename, chunkNumber);
 
         //Add to the first table
@@ -156,6 +167,36 @@ public class DirectoryServer implements Runnable {
         }
     }
 
+    private void handleNameMsg(Socket socket, String uniqueName, String type) {
+        // Set unique name of ths thread
+        if(this.uniqueName == null) {
+            this.uniqueName = uniqueName;
+        } else {
+            System.err.println("The unique name of this thread already exists");
+        }
+
+        // Check whether host exists in the host list
+        Host host = hosts.get(uniqueName);
+        if (host == null) {
+            host = new Host();
+            host.setUniqueName(uniqueName);
+        }
+
+        // Set sockets
+        switch (type) {
+            case Constant.TYPE_CLIENT_SOCKET:
+                host.setClientSocket(socket);
+                break;
+            case Constant.TYPE_TRANSIENT_SOCKET:
+                host.setTransientServerSocket(socket);
+                break;
+            default:
+                System.err.println("Invalid socket type");
+        }
+
+        hosts.put(uniqueName, host);
+    }
+
     private String handleClientMsg(Socket client, String[] parsedClientMsg) {
 
         String type = parsedClientMsg[0];
@@ -163,13 +204,18 @@ public class DirectoryServer implements Runnable {
         String returnMessage;
 
         switch(type) {
+            case Constant.COMMAND_NAME:
+                String uniqueName = parsedClientMsg[1];
+                String socketType = parsedClientMsg[2];
+                handleNameMsg(client, uniqueName, socketType);
+                returnMessage = getAckMessage();
+                break;
+
             case Constant.COMMAND_INFORM:
                 String filename = parsedClientMsg[1];
                 int chunkNumber = Integer.parseInt(parsedClientMsg[2]);
-                String clientPublicIp = client.getInetAddress().toString();
-                int clientPublicPort = Constant.P2P_SERVER_PORT;
 
-                handleInformMsg(filename, chunkNumber, clientPublicIp, clientPublicPort);
+                handleInformMsg(filename, chunkNumber);
                 returnMessage = getAckMessage();
                 break;
 
@@ -260,11 +306,11 @@ public class DirectoryServer implements Runnable {
 
     @Override
     public void run() {
-        System.out.println("New thread created to entertain the client " + clientIp(acceptedClientSocket) + "\n");
-        while (!acceptedClientSocket.isClosed()) {
-            handleClientSocket(acceptedClientSocket);
+        System.out.println("New thread created to entertain the client " + clientIp(acceptedSocket) + "\n");
+        while (!acceptedSocket.isClosed()) {
+            handleClientSocket(acceptedSocket);
         }
-        System.out.println(clientIp(acceptedClientSocket) + " exits...\n");
+        System.out.println(uniqueName + " " + clientIp(acceptedSocket) + " exits...\n");
     }
 
     private String[] parse(String message) {
@@ -310,34 +356,63 @@ public class DirectoryServer implements Runnable {
     }
 
     private class Host {
-        private String IPAddress;
 
-        private int portNumber;
+        private String uniqueName;
+        private Socket clientSocket;
+        private Socket transientServerSocket;
 
-        public Host(String IPAddress, int portNumber) {
-            this.IPAddress = IPAddress;
-            this.portNumber = portNumber;
+        public Host() { }
+
+        public String getUniqueName() {
+            return uniqueName;
         }
 
-        public String getIPAddress() {
-            return IPAddress;
+        private void setUniqueName(String uniqueName) {
+            if(this.uniqueName == null) {
+                this.uniqueName = uniqueName;
+                System.out.println("Unique name is set: " + uniqueName);
+            } else {
+                System.err.println("Unique name already set");
+            }
         }
 
-        public int getPortNumber() {
-            return portNumber;
+        public Socket getClientSocket() {
+            return clientSocket;
+        }
+
+        public void setClientSocket(Socket clientSocket) {
+            if(this.clientSocket == null) {
+                this.clientSocket = clientSocket;
+                System.out.println("Set client socket of " + uniqueName);
+            } else {
+                System.err.println("Client socket already exists!");
+            }
+        }
+
+        public Socket getTransientServerSocket() {
+            return transientServerSocket;
+        }
+
+        public void setTransientServerSocket(Socket transientServerSocket) {
+            if(this.transientServerSocket == null) {
+                this.transientServerSocket = transientServerSocket;
+                System.out.println("Set transient socket of " + uniqueName);
+            } else {
+                System.err.println("Transient socket already exists!");
+            }
+
         }
 
         @Override
         public boolean equals(Object other) {
             return other == this
                     || (other instanceof Host
-                    && this.portNumber == ((Host) other).portNumber
-                    && this.IPAddress.equals(((Host) other).IPAddress));
+                    && this.uniqueName.equals(((Host) other).uniqueName));
         }
 
         @Override
         public int hashCode() {
-            return this.IPAddress.hashCode() + this.portNumber * 17;
+            return this.uniqueName.hashCode();
         }
     }
 

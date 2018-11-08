@@ -4,6 +4,10 @@ public class Constant {
     public static final String COMMAND_INFORM = "INFORM";
     public static final String COMMAND_LIST = "LIST";
     public static final String COMMAND_QUERY = "QUERY";
+    public static final String COMMAND_NAME = "NAME";
+
+    public static final String TYPE_CLIENT_SOCKET = "CLIENT";
+    public static final String TYPE_TRANSIENT_SOCKET = "TRANSIENT";
 
     public static final String LOCALHOST_IP = "localhost";
     public static final int DIR_SERVER_PORT = 9090;
