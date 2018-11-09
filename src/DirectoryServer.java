@@ -144,7 +144,7 @@ public class DirectoryServer implements Runnable {
     private void handleDownloadFile(String filename) {
         // Send number of chunk to client
         int numOfChunk = getNumOfChunk(filename);
-        send(acceptedSocket, "" + numOfChunk);
+        send(acceptedSocket, "" + numOfChunk + Constant.MESSAGE_DELIMITER);
 
         for(int i = 1; i <= numOfChunk; i++) {
             // Pick a host that have the chunk of the file
@@ -380,8 +380,6 @@ public class DirectoryServer implements Runnable {
                     nextLine = null;
                 }
             }
-
-            scanner.close();
         } catch (Exception e) {
             System.err.println(e.getMessage());
         }
@@ -400,7 +398,6 @@ public class DirectoryServer implements Runnable {
             System.out.println("Server is sending client: " + messageToSend);
             PrintWriter writer = new PrintWriter(client.getOutputStream(), true);
             writer.println(messageToSend);
-            writer.close();
         } catch (IOException ioe) {
             System.err.println(ioe.getMessage());
         }

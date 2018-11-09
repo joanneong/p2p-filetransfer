@@ -1,8 +1,4 @@
-import java.io.BufferedOutputStream;
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.PrintWriter;
+import java.io.*;
 import java.net.Socket;
 import java.util.Scanner;
 
@@ -34,10 +30,9 @@ public class P2PClient {
         pw.println(toServer);
         pw.flush();
 
-        sc.nextLine();
-        messageReceived = sc.nextLine();
+        String[] message = getMessageFromClientSocket(clientSocket);
 
-        if (messageReceived.equals(Constant.MESSAGE_ACK)) {
+        if (message[0].equals(Constant.MESSAGE_ACK)) {
             System.out.println("Unique name " + uniqueName + " successfully sent from client to directory server!");
         } else {
             System.err.println("Error: could not send unique name " + uniqueName + " to directory server!");
@@ -66,11 +61,10 @@ public class P2PClient {
         pw.println(toServer);
         pw.flush();
 
-        messageReceived = sc.nextLine();
-        System.out.println("Inform chunk " + chunkNumber + " to directory server: " + messageReceived);
-        sc.nextLine();
+        String[] message = getMessageFromClientSocket(clientSocket);
+        System.out.println("Inform chunk " + chunkNumber + " to directory server: " + message[0]);
 
-        if (messageReceived.equals(Constant.MESSAGE_ACK)) {
+        if (message[0].equals(Constant.MESSAGE_ACK)) {
             return "File " + fileName + " chunk " + chunkNumber + " informed to directory server";
         } else {
             return Constant.ERROR_CLIENT_INFORM_FAILED;
@@ -86,18 +80,16 @@ public class P2PClient {
         pw.println(toServer);
         pw.flush();
 
-        sc.nextLine();
-        messageReceived = sc.nextLine();
+        String[] message = getMessageFromClientSocket(clientSocket);
 
-        if (messageReceived.equals(Constant.MESSAGE_CHUNK_NOT_EXIST)) {
-            sc.nextLine();
+        if (message[0].equals(Constant.MESSAGE_CHUNK_NOT_EXIST)) {
             return Constant.ERROR_QUERY_FILE_NOT_EXIST;
         } else {
-            String p2pServerIP = messageReceived;
-            String p2pServerPort = sc.nextLine();
-            sc.nextLine();
+            String p2pServerIP = message[0];
+            String p2pServerPort = message[1];
 
-            return "File " + fileName + " found at port " + p2pServerPort + " of P2P server " + p2pServerIP + Constant.MESSAGE_DELIMITER;
+            return "File " + fileName + " found at port " + p2pServerPort + " of P2P server "
+                    + p2pServerIP + Constant.MESSAGE_DELIMITER;
         }
     }
 
@@ -116,9 +108,8 @@ public class P2PClient {
         pw.flush();
 
         // Get the total number of chunks to expect from the directory server
-        sc.nextLine();
-        messageReceived = sc.nextLine();
-        int totalChunksToReceive = Integer.parseInt(messageReceived);
+        String[] message = getMessageFromClientSocket(clientSocket);
+        int totalChunksToReceive = Integer.parseInt(message[0]);
 
         // Check if the file exists (to the directory server's knowledge)
         if (totalChunksToReceive == 0) {
@@ -161,20 +152,16 @@ public class P2PClient {
         StringBuilder replyMessage = new StringBuilder();
         replyMessage.append("File list:").append(Constant.MESSAGE_DELIMITER);
 
-        sc.nextLine();
-        messageReceived = sc.nextLine();
+        String[] message = getMessageFromClientSocket(clientSocket);
 
-        if (messageReceived.equals(Constant.MESSAGE_FILE_LIST_EMPTY)) {
+        if (message[1].equals(Constant.MESSAGE_FILE_LIST_EMPTY)) {
             replyMessage.append("There is no file available").append(Constant.MESSAGE_DELIMITER);
         } else {
-            int fileCount = Integer.parseInt(messageReceived);
+            int fileCount = Integer.parseInt(message[1]);
             for (int i = 0; i < fileCount; i++) {
-                messageReceived = sc.nextLine();
-                replyMessage.append(messageReceived).append(Constant.MESSAGE_DELIMITER);
+                replyMessage.append(message[i + 2]).append(Constant.MESSAGE_DELIMITER);
             }
         }
-
-        sc.nextLine();
 
         return replyMessage.toString();
     }
@@ -220,7 +207,7 @@ public class P2PClient {
                         break;
                     }
 
-                    replyMessage = "File " + fileName + "successfully informed to directory server";
+                    replyMessage = "File " + fileName + " successfully informed to directory server\n";
                     String tempMessage;
                     for (int i = 1; i <= chunkNumber; i++) {
                         tempMessage = sendInformMessage(fileName, i);
@@ -291,6 +278,43 @@ public class P2PClient {
         } catch (IOException ioe) {
             ioe.printStackTrace();
         }
+    }
+
+    private String[] getMessageFromClientSocket(Socket client) {
+        String messageFromClient = getMsgFromClient(client);
+
+        String[] parsedClientMsg = parse(messageFromClient);
+
+        return parsedClientMsg;
+    }
+
+    private String[] parse(String message) {
+        return message.split(Constant.MESSAGE_DELIMITER);
+    }
+
+    // Read in a message from a P2P client
+    private String getMsgFromClient(Socket client) {
+        String messageFromClient = "";
+
+        try {
+            BufferedReader scanner = new BufferedReader(new InputStreamReader(client.getInputStream()));
+            String nextLine = scanner.readLine();
+
+            while (nextLine != null) {
+                System.out.println("Current line read: " + nextLine);
+                messageFromClient += nextLine;
+                messageFromClient += Constant.MESSAGE_DELIMITER;
+
+                if (scanner.ready()) {
+                    nextLine = scanner.readLine();
+                } else {
+                    nextLine = null;
+                }
+            }
+        } catch (Exception e) {
+            System.err.println(e.getMessage());
+        }
+        return messageFromClient;
     }
 
 }
