@@ -20,6 +20,7 @@ public class DirectoryServer implements Runnable {
         this.firstTable = new HashMap<>();
         this.secondTable = new HashMap<>();
         this.hosts = new HashMap<>();
+        this.semaphores = new HashMap<>();
     }
 
     public DirectoryServer(Socket acceptedSocket, HashMap<Chunk, List<Host>> firstTable,
@@ -82,12 +83,48 @@ public class DirectoryServer implements Runnable {
         return Constant.MESSAGE_GOODBYE + Constant.MESSAGE_DELIMITER;
     }
 
+    private String getAckMessage() {
+        return Constant.MESSAGE_ACK + Constant.MESSAGE_DELIMITER;
+    }
+
+    // Store a connection request from a P2PClient / P2P Transient Server to the directory server
+    private void handleNameMsg(Socket socket, String uniqueName, String type) {
+        // Set unique name of this thread
+        if(this.uniqueName == null) {
+            this.uniqueName = uniqueName;
+        } else {
+            // This should not happen
+            System.err.println("The unique name of this thread already exists");
+        }
+
+        // Check whether host exists in the host list
+        Host host = hosts.get(uniqueName);
+        if (host == null) {
+            host = new Host();
+            host.setUniqueName(uniqueName);
+        }
+
+        // Set sockets
+        switch (type) {
+            case Constant.TYPE_CLIENT_SOCKET:
+                host.setClientSocket(socket);
+                break;
+            case Constant.TYPE_TRANSIENT_SOCKET:
+                host.setTransientServerSocket(socket);
+                break;
+            default:
+                System.err.println("Invalid socket type");
+        }
+
+        hosts.put(uniqueName, host);
+    }
+
     private void handleInformMsg(String filename, int chunkNumber) {
 
         Host host = getHostOfCurrentThread();
         Chunk chunk = new Chunk(filename, chunkNumber);
 
-        //Add to the first table
+        // Add to the first table
         List<Host> availableHosts = firstTable.get(chunk);
         if (availableHosts == null) {
             availableHosts = new ArrayList<>();
@@ -102,6 +139,66 @@ public class DirectoryServer implements Runnable {
         }
         chunksOfTheHost.add(chunk);
         secondTable.put(host, chunksOfTheHost);
+    }
+
+    private void handleDownloadFile(String filename) {
+        // Send number of chunk to client
+        int numOfChunk = getNumOfChunk(filename);
+        send(acceptedSocket, "" + numOfChunk);
+
+        for(int i = 1; i <= numOfChunk; i++) {
+            // Pick a host that have the chunk of the file
+            Host randomlySelectedHost = getRandomHost(filename, i);
+            Socket transientSocket = randomlySelectedHost.getTransientServerSocket();
+
+            // Send DOWNLOAD command to the transient server
+            String command = Constant.COMMAND_DOWNLOAD + Constant.MESSAGE_DELIMITER
+                             + filename + Constant.MESSAGE_DELIMITER
+                             + i + Constant.MESSAGE_DELIMITER
+                             + getUniqueNameOfThread() + Constant.MESSAGE_DELIMITER;
+            send(transientSocket, command);
+
+            // Set up semaphore
+            setSemaphore(getUniqueNameOfThread());
+
+            // Wait for semaphore
+            while(!isSemaphoreReleased(getUniqueNameOfThread())) {
+                try {
+                    Thread.sleep(100);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+    }
+
+    private void handleUploadFile(String clientName, Socket transientServerSocket) {
+        // Get the target client
+        Host clientHost = getHost(clientName);
+        Socket clientSocket = clientHost.getClientSocket();
+
+        byte[] buffer = new byte[Constant.CHUNK_SIZE];
+        try {
+            // Receive data from transient server
+            int bytesRead = transientServerSocket.getInputStream().read(buffer);
+            if (bytesRead <= 0) { // Error when reading
+                System.err.println("Bytes read from transient server to " + clientName + " is " + bytesRead);
+            }
+            if (bytesRead != Constant.CHUNK_SIZE) {
+                // This is the last packet
+                buffer = Arrays.copyOfRange(buffer, 0, bytesRead);
+            }
+
+            // Send data back to client
+            DataOutputStream toClient = new DataOutputStream(clientSocket.getOutputStream());
+            toClient.write(buffer);
+            toClient.flush();
+            toClient.close();
+
+            releaseSemaphore(getUniqueNameOfThread());
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     private void handleExitMsg() {
@@ -129,7 +226,7 @@ public class DirectoryServer implements Runnable {
         }
 
         // Close sockets of client
-        try{
+        try {
             clientHost.getTransientServerSocket().close();
             clientHost.getClientSocket().close();
         } catch (IOException e) {
@@ -140,96 +237,6 @@ public class DirectoryServer implements Runnable {
         hosts.remove(getUniqueNameOfThread());
     }
 
-    private void handleNameMsg(Socket socket, String uniqueName, String type) {
-        // Set unique name of ths thread
-        if(this.uniqueName == null) {
-            this.uniqueName = uniqueName;
-        } else {
-            System.err.println("The unique name of this thread already exists");
-        }
-
-        // Check whether host exists in the host list
-        Host host = hosts.get(uniqueName);
-        if (host == null) {
-            host = new Host();
-            host.setUniqueName(uniqueName);
-        }
-
-        // Set sockets
-        switch (type) {
-            case Constant.TYPE_CLIENT_SOCKET:
-                host.setClientSocket(socket);
-                break;
-            case Constant.TYPE_TRANSIENT_SOCKET:
-                host.setTransientServerSocket(socket);
-                break;
-            default:
-                System.err.println("Invalid socket type");
-        }
-
-        hosts.put(uniqueName, host);
-    }
-
-    private void handleDownloadFile(String filename) {
-        // Send number of chunk to client
-        int numOfChunk = getNumOfChunk(filename);
-        send(acceptedSocket, "" + numOfChunk);
-
-        for(int i = 1; i <= numOfChunk; i++) {
-            // Pick a host that have the chunk of the file
-            Host randomlySelectedHost = getRandomHost(filename, i);
-            Socket transientSocket = randomlySelectedHost.getTransientServerSocket();
-
-            // Send DOWNLOAD command to the transient server
-            String command = Constant.COMMAND_DOWNLOAD + Constant.MESSAGE_DELIMITER
-                             + filename + Constant.MESSAGE_DELIMITER
-                             + i + Constant.MESSAGE_DELIMITER
-                             + getUniqueNameOfThread() + Constant.MESSAGE_DELIMITER;
-            send(transientSocket, command);
-
-            // Set up semophore
-            setSemaphore(getUniqueNameOfThread());
-
-            // Wait for semaphore
-            while(!isSemaphoreReleased(getUniqueNameOfThread())) {
-                try {
-                    Thread.sleep(100);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-            }
-        }
-    }
-
-    private void handleUploadFile(String clientName, Socket transientServerSocket) {
-        // Get the target client
-        Host clientHost = getHost(clientName);
-        Socket clientSocket = clientHost.getClientSocket();
-
-        byte[] buffer = new byte[Constant.CHUNK_SIZE];
-        try {
-            // Receive data from transient server
-            int bytesRead = transientServerSocket.getInputStream().read(buffer);
-            if (bytesRead <= 0) { // Error when reading
-                System.err.println("Bytes read from transient server to " + clientName + " is " + bytesRead);
-            }
-            if (bytesRead != Constant.CHUNK_SIZE) {
-                // it is the case for the last packet
-                buffer = Arrays.copyOfRange(buffer, 0, bytesRead);
-            }
-
-            // Send data back to client
-            DataOutputStream toClient = new DataOutputStream(clientSocket.getOutputStream());
-            toClient.write(buffer);
-            toClient.flush();
-            toClient.close();
-
-            releaseSemaphore(getUniqueNameOfThread());
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-
 //======================================================================================================================
 //======================================= Functions for handling socket ================================================
 
@@ -237,7 +244,7 @@ public class DirectoryServer implements Runnable {
 
         String type = parsedClientMsg[0];
         System.out.println("Client message has type: " + type);
-        String returnMessage = "";
+        String returnMessage;
 
         switch(type) {
             case Constant.COMMAND_NAME:
@@ -350,33 +357,35 @@ public class DirectoryServer implements Runnable {
 //======================================================================================================================
 //======================================= Helper classes and functions =================================================
 
-    private String getUniqueNameOfThread() {
-        if(uniqueName == null) {
-            System.err.println("Unique name is null!");
+    private String[] parse(String message) {
+        return message.split(Constant.MESSAGE_DELIMITER);
+    }
+
+    // Read in a message from a P2P client
+    private String getMsgFromClient(Socket client) {
+        String messageFromClient = "";
+
+        try {
+            BufferedReader scanner = new BufferedReader(new InputStreamReader(client.getInputStream()));
+            String nextLine = scanner.readLine();
+
+            while (nextLine != null) {
+                System.out.println("Current line read: " + nextLine);
+                messageFromClient += nextLine;
+                messageFromClient += Constant.MESSAGE_DELIMITER;
+
+                if (scanner.ready()) {
+                    nextLine = scanner.readLine();
+                } else {
+                    nextLine = null;
+                }
+            }
+
+            scanner.close();
+        } catch (Exception e) {
+            System.err.println(e.getMessage());
         }
-        return uniqueName;
-    }
-
-    private void setSemaphore(String uniqueName) {
-        System.out.println("Set semaphore of " + getUniqueNameOfThread());
-        semaphores.put(getUniqueNameOfThread(), true);
-    }
-
-    private void releaseSemaphore(String uniqueName) {
-        System.out.println("Release semaphore of " + getUniqueNameOfThread());
-        semaphores.put(getUniqueNameOfThread(), false);
-    }
-
-    private Boolean isSemaphoreReleased(String uniqueName) {
-         Boolean isReleased = semaphores.get(getUniqueNameOfThread());
-         if(isReleased == null) {
-             System.err.println("Semaphore of " + getUniqueNameOfThread() + " is null!");
-         }
-         return isReleased;
-    }
-
-    private String getAckMessage() {
-        return Constant.MESSAGE_ACK + Constant.MESSAGE_DELIMITER;
+        return messageFromClient;
     }
 
     // Send TCP message to client
@@ -394,6 +403,18 @@ public class DirectoryServer implements Runnable {
             writer.close();
         } catch (IOException ioe) {
             System.err.println(ioe.getMessage());
+        }
+    }
+
+    // Find the total number of chunks for a file with the given filename
+    private int getNumOfChunk(String fileName) {
+        int chunk = 0;
+        while(true) {
+            if(!getHostsOfChunk(fileName, chunk + 1).isEmpty()) {
+                chunk++;
+            } else {
+                return chunk;
+            }
         }
     }
 
@@ -416,55 +437,29 @@ public class DirectoryServer implements Runnable {
         return host;
     }
 
-    private int getNumOfChunk(String fileName) {
-        int chunk = 0;
-        while(true) {
-            if(!getHostsOfChunk(fileName, chunk + 1).isEmpty()) {
-                chunk++;
-            } else {
-                return chunk;
-            }
+    private String getUniqueNameOfThread() {
+        if(uniqueName == null) {
+            System.err.println("Unique name is null!");
         }
+        return uniqueName;
     }
 
-    private String getMsgFromClient(Socket client) {
-        String messageFromClient = "";
+    private void setSemaphore(String uniqueName) {
+        System.out.println("Set semaphore of " + getUniqueNameOfThread());
+        semaphores.put(uniqueName, true);
+    }
 
-        try {
-            BufferedReader scanner = new BufferedReader(new InputStreamReader(client.getInputStream()));
-            String nextLine = scanner.readLine();
-
-            while (nextLine != null) {
-                System.out.println("Current line read: " + nextLine);
-                messageFromClient += nextLine;
-                messageFromClient += Constant.MESSAGE_DELIMITER;
-
-                if (scanner.ready()) {
-                    nextLine = scanner.readLine();
-                } else {
-                    nextLine = null;
-                }
-            }
-        } catch (Exception e) {
-            System.err.println(e.getMessage());
+    private Boolean isSemaphoreReleased(String uniqueName) {
+        Boolean isReleased = semaphores.get(getUniqueNameOfThread());
+        if(isReleased == null) {
+            System.err.println("Semaphore of " + uniqueName + " is null!");
         }
-        return messageFromClient;
+        return isReleased;
     }
 
-    private String clientIp(Socket socket) {
-        return socket.getInetAddress().toString() + ":" + socket.getPort();
-    }
-
-    private String[] parse(String message) {
-        return message.split(Constant.MESSAGE_DELIMITER);
-    }
-
-    private Host getHost(String name) {
-        Host host = hosts.get(name);
-        if(host == null) {
-            System.err.println("Host " + name + " does not exist");
-        }
-        return host;
+    private void releaseSemaphore(String uniqueName) {
+        System.out.println("Release semaphore of " + getUniqueNameOfThread());
+        semaphores.put(uniqueName, false);
     }
 
     private void printAllTables() {
@@ -504,6 +499,18 @@ public class DirectoryServer implements Runnable {
         }
         System.out.println("Second table content:");
         System.out.println(s);
+    }
+
+    private String clientIp(Socket socket) {
+        return socket.getInetAddress().toString() + ":" + socket.getPort();
+    }
+
+    private Host getHost(String name) {
+        Host host = hosts.get(name);
+        if(host == null) {
+            System.err.println("Host " + name + " does not exist");
+        }
+        return host;
     }
 
     private class Chunk {
@@ -551,7 +558,7 @@ public class DirectoryServer implements Runnable {
             return uniqueName;
         }
 
-        private void setUniqueName(String uniqueName) {
+        public void setUniqueName(String uniqueName) {
             if(this.uniqueName == null) {
                 this.uniqueName = uniqueName;
                 System.out.println("Unique name is set: " + uniqueName);
