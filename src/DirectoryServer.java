@@ -225,6 +225,9 @@ public class DirectoryServer implements Runnable {
             }
         }
 
+        // Send EXIT command to transient server
+        send(clientHost.getTransientServerSocket(), Constant.COMMAND_EXIT + Constant.MESSAGE_DELIMITER);
+
         // Close sockets of client
         try {
             clientHost.getTransientServerSocket().close();
@@ -479,7 +482,7 @@ public class DirectoryServer implements Runnable {
         HashMap<Chunk, List<Host>> table = firstTable;
         String s = "";
         for (Chunk chunk: table.keySet()) {
-            s += chunk.filename + " " + chunk.chunkNumber + "is at: \n";
+            s += chunk.filename + " " + chunk.chunkNumber + " is at: \n";
             for(Host host: table.get(chunk)) {
                 s += host.getUniqueName();
             }
@@ -612,8 +615,8 @@ public class DirectoryServer implements Runnable {
                 return "Name: " + uniqueName;
             } else {
                 return "Name: " + uniqueName
-                        + "Client: " + clientIp(clientSocket)
-                        + "Transient: " + clientIp(transientServerSocket);
+                        + " Client: " + clientIp(clientSocket)
+                        + " Transient: " + clientIp(transientServerSocket);
             }
         }
     }

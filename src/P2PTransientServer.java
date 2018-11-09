@@ -228,7 +228,6 @@ public class P2PTransientServer implements Runnable {
                 } else {
                     nextLine = null;
                 }
-                scanner.close();
             }
         } catch (Exception e) {
             System.err.println(e.getMessage());

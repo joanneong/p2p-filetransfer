@@ -80,11 +80,11 @@ public class P2PClient {
 
         String[] message = getMessageFromClientSocket(clientSocket);
 
-        if (message[0].equals(Constant.MESSAGE_CHUNK_NOT_EXIST)) {
+        if (message[1].equals(Constant.MESSAGE_CHUNK_NOT_EXIST)) {
             return Constant.ERROR_QUERY_FILE_NOT_EXIST;
         } else {
-            String p2pServerIP = message[0];
-            String p2pServerPort = message[1];
+            String p2pServerIP = message[1];
+            String p2pServerPort = message[2];
 
             return "File " + fileName + " found at port " + p2pServerPort + " of P2P server "
                     + p2pServerIP + Constant.MESSAGE_DELIMITER;
@@ -237,21 +237,18 @@ public class P2PClient {
 
                 case Constant.COMMAND_EXIT:
                     sendExitMessage();
+                    scanner.close();
+                    sc.close();
+                    pw.close();
+                    clientSocket.close();
                     System.out.println(Constant.MESSAGE_GOODBYE);
+                    System.exit(0);
                     break;
 
                 default:
                     System.out.println(Constant.ERROR_INVALID_COMMAND);
                     scanner.nextLine();
                     break;
-            }
-
-            if (fromClient.toUpperCase().equals(Constant.COMMAND_EXIT)) {
-                scanner.close();
-                sc.close();
-                pw.close();
-                clientSocket.close();
-                break;
             }
 
             fromClient = scanner.next();
