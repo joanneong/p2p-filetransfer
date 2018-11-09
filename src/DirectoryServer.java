@@ -470,7 +470,7 @@ public class DirectoryServer implements Runnable {
 
     private void printAllHosts() {
         System.out.println("\n All hosts:\n");
-        System.out.println(Arrays.toString(hosts.keySet().toArray()));
+        System.out.println(Arrays.toString(hosts.values().toArray()));
     }
 
     private void printFirstTableContent() {
@@ -537,7 +537,6 @@ public class DirectoryServer implements Runnable {
                     || (other instanceof Chunk
                     && this.chunkNumber == ((Chunk) other).chunkNumber
                     && this.filename.equals(((Chunk) other).filename));
-
         }
 
         @Override
@@ -603,6 +602,13 @@ public class DirectoryServer implements Runnable {
         @Override
         public int hashCode() {
             return this.uniqueName.hashCode();
+        }
+
+        @Override
+        public String toString() {
+            return "Name: " + uniqueName
+                    + "Client: " + clientIp(clientSocket)
+                    + "Transient: " + clientIp(transientServerSocket);
         }
     }
 

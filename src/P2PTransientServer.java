@@ -162,7 +162,8 @@ public class P2PTransientServer implements Runnable {
 
     @Override
     public void run() {
-        System.out.println("New thread created to send data requested by " + requestUniqueName);
+        System.out.println("New thread created to send " + requestFilename + " chunk "
+                +  requestChunkNum+" requested by " + requestUniqueName);
         handleDownloadMsg(requestFilename, requestChunkNum, requestUniqueName);
         System.out.println("Closing socket which sent data requested by " + requestUniqueName);
     }
