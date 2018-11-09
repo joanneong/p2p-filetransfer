@@ -422,8 +422,13 @@ public class DirectoryServer implements Runnable {
 
     private Host getRandomHost(String filename, int chunk) {
         List<Host> listOfHosts = getHostsOfChunk(filename, chunk);
-        int randomNumber = (int) (Math.random() * listOfHosts.size());
-        return listOfHosts.get(randomNumber);
+
+        Host host = null;
+        if (listOfHosts != null) {
+            int randomNumber = (int) (Math.random() * listOfHosts.size());
+            host = listOfHosts.get(randomNumber);
+        }
+        return host;
     }
 
     private Host getHostOfCurrentThread() {

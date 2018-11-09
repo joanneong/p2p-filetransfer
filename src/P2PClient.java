@@ -31,9 +31,9 @@ public class P2PClient {
         String[] message = getMessageFromClientSocket(clientSocket);
 
         if (message[0].equals(Constant.MESSAGE_ACK)) {
-            System.out.println("Unique name " + uniqueName + " successfully sent from client to directory server!");
+            System.out.println("Unique name " + uniqueName + " successfully sent from client to directory server!\n");
         } else {
-            System.err.println("Error: could not send unique name " + uniqueName + " to directory server!");
+            System.err.println("Error: could not send unique name " + uniqueName + " to directory server!\n");
         }
     }
 
@@ -63,7 +63,7 @@ public class P2PClient {
         System.out.println("Inform chunk " + chunkNumber + " to directory server: " + message[0]);
 
         if (message[0].equals(Constant.MESSAGE_ACK)) {
-            return "File " + fileName + " chunk " + chunkNumber + " informed to directory server";
+            return "File " + fileName + " chunk " + chunkNumber + " informed to directory server\n";
         } else {
             return Constant.ERROR_CLIENT_INFORM_FAILED;
         }
