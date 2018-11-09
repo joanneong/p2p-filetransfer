@@ -14,8 +14,6 @@ public class P2PTransientServer implements Runnable {
     PrintWriter pw;
     Scanner sc;
 
-    String messageReceived;
-
     // For thread to send data to directory server
     String requestFilename;
     int requestChunkNum;
@@ -46,10 +44,9 @@ public class P2PTransientServer implements Runnable {
         pw.println(toServer);
         pw.flush();
 
-        sc.nextLine();
-        messageReceived =  sc.nextLine();
+        String[] message = getMessageFromClientSocket(transientServerSocket);
 
-        if (messageReceived.equals(Constant.MESSAGE_ACK)) {
+        if (message[0].equals(Constant.MESSAGE_ACK)) {
             System.out.println("Unique name " + uniqueName + " successfully sent from transient server to directory server!");
         } else {
             System.err.println("Error: could not send unique name " + uniqueName + " to directory server!");
@@ -245,6 +242,14 @@ public class P2PTransientServer implements Runnable {
 
     private String[] parse(String message) {
         return message.split(Constant.MESSAGE_DELIMITER);
+    }
+
+    private String[] getMessageFromClientSocket(Socket client) {
+        String messageFromClient = getMsgFromClient(client);
+
+        String[] parsedClientMsg = parse(messageFromClient);
+
+        return parsedClientMsg;
     }
 
 }

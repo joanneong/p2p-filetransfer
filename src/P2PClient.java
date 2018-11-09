@@ -13,8 +13,6 @@ public class P2PClient {
     PrintWriter pw;
     Scanner sc;
 
-    String messageReceived;
-
     // Constructor function for a new P2P client
     P2PClient(String directoryServerIP, int directoryServerPort, String uniqueName) {
         this.directoryServerIP = directoryServerIP;
