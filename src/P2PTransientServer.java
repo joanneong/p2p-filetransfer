@@ -1,7 +1,4 @@
-import java.io.DataOutputStream;
-import java.io.IOException;
-import java.io.PrintWriter;
-import java.io.RandomAccessFile;
+import java.io.*;
 import java.net.Socket;
 import java.util.Arrays;
 import java.util.Scanner;
@@ -19,11 +16,25 @@ public class P2PTransientServer implements Runnable {
 
     String messageReceived;
 
+    // For thread to send data to directory server
+    String requestFilename;
+    int requestChunkNum;
+    String requestUniqueName;
+
     // Constructor function for P2P transient server
     public P2PTransientServer(String directoryServerIP, int directoryServerPort, String uniqueName) {
         this.directoryServerIP = directoryServerIP;
         this.directoryServerPort = directoryServerPort;
         this.uniqueName = uniqueName;
+    }
+
+    public P2PTransientServer(String directoryServerIP, int directoryServerPort,
+                              String requestFilename, int requestChunkNum, String requestUniqueName) {
+        this.directoryServerIP = directoryServerIP;
+        this.directoryServerPort = directoryServerPort;
+        this.requestFilename = requestFilename;
+        this.requestChunkNum = requestChunkNum;
+        this.requestUniqueName = requestUniqueName;
     }
 
     // Send a P2P transient server's unique name to the directory server during the initial connection
@@ -59,35 +70,67 @@ public class P2PTransientServer implements Runnable {
         // Inform the directory server that this connection is to a P2P transient server
         sendNameMessage();
 
-        try{
-            Scanner fromClient = new Scanner(transientServerSocket.getInputStream());
+        // Listen to incoming
+        while(true) {
+            handleClientSocket(transientServerSocket);
+        }
 
-            // Open writer and scanner between p2p transient server and directory server
-            pw = new PrintWriter(transientServerSocket.getOutputStream(), true);
-            sc = new Scanner(transientServerSocket.getInputStream());
+    }
 
-            while (true) {
-                // Print public IP address of the client requesting for data
-                System.out.println("Data requested by " + messageReceived);
+    private void handleClientSocket(Socket client) {
+        String messageFromClient = getMsgFromClient(client);
 
-                String[] temp = fromClient.nextLine().split(":");
-                String fileName = temp[0];
-                int chunkNumber = Integer.parseInt(temp[1]);
+        if (!messageFromClient.isEmpty()) {
+            System.out.println("Parsing directory server message...");
+            String[] parsedClientMsg = parse(messageFromClient);
 
-                fromClient.nextLine();
+            System.out.println("Preparing reply...");
+            handleClientMsg(parsedClientMsg);
+        }
+    }
 
-                byte[] messageRequested = getRequestMessage(fileName, chunkNumber);
-                sendP2PResponse(transientServerSocket, messageRequested);
+    private void handleClientMsg(String[] parsedClientMsg) {
 
-                System.out.println("Sent " + fileName + " chunk " + chunkNumber);
+        String type = parsedClientMsg[0];
+        System.out.println("Client message has type: " + type);
 
-                messageReceived = fromClient.nextLine();
-            }
+        switch(type) {
+            case Constant.COMMAND_DOWNLOAD:
+                String filename = parsedClientMsg[1];
+                int chunkNumber = Integer.parseInt(parsedClientMsg[2]);
+                String clientUniqueName = parsedClientMsg[2];
 
-            // System.out.println("P2P transient server closed. Goodbye!");
+                // Create new thread to handel download command
+                P2PTransientServer newServer = new P2PTransientServer(directoryServerIP, directoryServerPort,
+                        filename, chunkNumber, clientUniqueName);
+                new Thread(newServer).start();
+                break;
 
-        } catch (IOException ioe) {
-            System.out.println(ioe.getMessage());
+            case Constant.COMMAND_EXIT:
+                System.exit(0);
+                break;
+
+            default:
+                System.out.println(Constant.ERROR_INVALID_COMMAND);
+        }
+    }
+
+    private void handleDownloadMsg(String filename, int chunkNumber, String clientUniqueName) {
+        String messageToSend = Constant.COMMAND_UPLOAD + Constant.MESSAGE_DELIMITER
+                                + clientUniqueName + Constant.MESSAGE_DELIMITER;
+        try {
+            // Create new socket to directory server
+            Socket newSocketToDirectory = new Socket(directoryServerIP, directoryServerPort);
+
+            // Send UPLOAD command
+            send(newSocketToDirectory, messageToSend);
+
+            // Send data
+            byte[] messageRequested = getRequestMessage(filename, chunkNumber);
+            sendP2PResponse(newSocketToDirectory, messageRequested);
+
+        } catch (IOException e) {
+            e.printStackTrace();
         }
     }
 
@@ -117,27 +160,11 @@ public class P2PTransientServer implements Runnable {
         }
     }
 
-    private void sendP2PResponse(Socket serverSocket, byte[] response) {
-	  try {
-	      DataOutputStream toClient = new DataOutputStream(serverSocket.getOutputStream());
-          toClient.write(response);
-          toClient.flush();
-
-          System.out.println("Data requested has been sent" + Constant.MESSAGE_DELIMITER);
-
-          toClient.close();
-      } catch (IOException ioe) {
-          System.out.println(ioe.getMessage());
-      }
-    }
-
     @Override
     public void run() {
-        System.out.println("New thread created to entertain the client " + clientIp(acceptedSocket) + "\n");
-        while (!acceptedSocket.isClosed()) {
-            handleClientSocket(acceptedSocket);
-        }
-        System.out.println(uniqueName + " " + clientIp(acceptedSocket) + " exits...\n");
+        System.out.println("New thread created to send data requested by " + requestUniqueName);
+        handleDownloadMsg(requestFilename, requestChunkNum, requestUniqueName);
+        System.out.println("Closing socket which sent data requested by " + requestUniqueName);
     }
 
     public static void main(String[] args) {
@@ -158,6 +185,65 @@ public class P2PTransientServer implements Runnable {
         } catch (IOException ioe) {
             ioe.printStackTrace();
         }
+    }
+
+    private void sendP2PResponse(Socket serverSocket, byte[] response) {
+        try {
+            DataOutputStream toClient = new DataOutputStream(serverSocket.getOutputStream());
+            toClient.write(response);
+            toClient.flush();
+
+            System.out.println("Data requested has been sent" + Constant.MESSAGE_DELIMITER);
+
+            toClient.close();
+        } catch (IOException ioe) {
+            System.out.println(ioe.getMessage());
+        }
+    }
+
+    // Send TCP message to client
+    private void send(Socket client, String messageToSend) {
+        try {
+            System.out.println("Sending: " + messageToSend);
+            PrintWriter writer = new PrintWriter(client.getOutputStream(), true);
+            writer.println(messageToSend);
+            writer.close();
+        } catch (IOException ioe) {
+            System.err.println(ioe.getMessage());
+        }
+    }
+
+    private String getMsgFromClient(Socket client) {
+        String messageFromClient = "";
+
+        try {
+            BufferedReader scanner = new BufferedReader(new InputStreamReader(client.getInputStream()));
+            String nextLine = scanner.readLine();
+
+            while (nextLine != null) {
+                System.out.println("Current line read: " + nextLine);
+                messageFromClient += nextLine;
+                messageFromClient += Constant.MESSAGE_DELIMITER;
+
+                if (scanner.ready()) {
+                    nextLine = scanner.readLine();
+                } else {
+                    nextLine = null;
+                }
+                scanner.close();
+            }
+        } catch (Exception e) {
+            System.err.println(e.getMessage());
+        }
+        return messageFromClient;
+    }
+
+    private String clientIp(Socket socket) {
+        return socket.getInetAddress().toString() + ":" + socket.getPort();
+    }
+
+    private String[] parse(String message) {
+        return message.split(Constant.MESSAGE_DELIMITER);
     }
 
 }
