@@ -5,6 +5,7 @@ public class Constant {
     public static final String COMMAND_LIST = "LIST";
     public static final String COMMAND_QUERY = "QUERY";
     public static final String COMMAND_NAME = "NAME";
+    public static final String COMMAND_UPLOAD = "UPLOAD";
 
     public static final String TYPE_CLIENT_SOCKET = "CLIENT";
     public static final String TYPE_TRANSIENT_SOCKET = "TRANSIENT";

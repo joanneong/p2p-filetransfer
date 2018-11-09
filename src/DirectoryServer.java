@@ -1,13 +1,7 @@
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
-import java.io.IOException;
-import java.io.PrintWriter;
+import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 public class DirectoryServer implements Runnable {
@@ -34,9 +28,7 @@ public class DirectoryServer implements Runnable {
         this.firstTable = firstTable;
         this.secondTable = secondTable;
     }
-
-
-
+    
     private String getAckMessage() {
         return Constant.MESSAGE_ACK + Constant.MESSAGE_DELIMITER;
     }
@@ -112,7 +104,7 @@ public class DirectoryServer implements Runnable {
         if(messageToSend.isEmpty()) {
             return;
         }
-        
+
         try {
             System.out.println("Server is sending client: " + messageToSend);
             PrintWriter writer = new PrintWriter(client.getOutputStream(), true);
@@ -223,7 +215,7 @@ public class DirectoryServer implements Runnable {
 
         String type = parsedClientMsg[0];
         System.out.println("Client message has type: " + type);
-        String returnMessage;
+        String returnMessage = "";
 
         switch(type) {
             case Constant.COMMAND_NAME:
@@ -251,6 +243,14 @@ public class DirectoryServer implements Runnable {
                 String filename2 = parsedClientMsg[1];
 
                 handleDownloadFile(filename2);
+
+                returnMessage = ""; // Empty message won't be sent
+                break;
+
+            case Constant.COMMAND_UPLOAD:
+                String uniqueName2 = parsedClientMsg[1];
+
+                handleUploadFile(uniqueName2, client);
 
                 returnMessage = ""; // Empty message won't be sent
                 break;
@@ -303,12 +303,42 @@ public class DirectoryServer implements Runnable {
                              + uniqueName + Constant.MESSAGE_DELIMITER;
             send(transientSocket, command);
 
-            // Receive data from transient server todo
-
-            // Send data back to client todo
+            // Set up semophore
 
         }
+    }
 
+    private Host getHost(String name) {
+        Host host = hosts.get(name);
+        if(host == null) {
+            System.err.println("Host " + name + " does not exist");
+        }
+        return host;
+    }
+
+    private void handleUploadFile(String clientName, Socket transientServerSocket) {
+        // Get the target client
+        Host clientHost = getHost(clientName);
+        Socket clientSocket = clientHost.getClientSocket();
+
+        byte[] buffer = new byte[Constant.CHUNK_SIZE];
+        try {
+            // Receive data from transient server
+            int bytesRead = transientServerSocket.getInputStream().read(buffer);
+            if (bytesRead != Constant.CHUNK_SIZE) {
+                // it is the case for the last packet
+                buffer = Arrays.copyOfRange(buffer, 0, bytesRead);
+            }
+
+            // Send data back to client
+            DataOutputStream toClient = new DataOutputStream(clientSocket.getOutputStream());
+            toClient.write(buffer);
+            toClient.flush();
+            toClient.close();
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     private String getMsgFromClient(Socket client) {
@@ -378,7 +408,7 @@ public class DirectoryServer implements Runnable {
         while (!acceptedSocket.isClosed()) {
             handleClientSocket(acceptedSocket);
         }
-        System.out.println(uniqueName + " " + clientIp(acceptedSocket) + " exits...\n");
+        System.out.println("Thread for " + uniqueName + " " + clientIp(acceptedSocket) + " is close...\n");
     }
 
     private String[] parse(String message) {
@@ -390,6 +420,8 @@ public class DirectoryServer implements Runnable {
         directoryServer.startWelcomeSocket();
     }
 
+//======================================================================================================================
+//============================================= Helper classes==========================================================
     private class Chunk {
         private String filename;
 
