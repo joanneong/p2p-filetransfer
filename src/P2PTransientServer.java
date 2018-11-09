@@ -95,7 +95,7 @@ public class P2PTransientServer implements Runnable {
             case Constant.COMMAND_DOWNLOAD:
                 String filename = parsedClientMsg[1];
                 int chunkNumber = Integer.parseInt(parsedClientMsg[2]);
-                String clientUniqueName = parsedClientMsg[2];
+                String clientUniqueName = parsedClientMsg[3];
 
                 // Create new thread to handel download command
                 P2PTransientServer newServer = new P2PTransientServer(directoryServerIP, directoryServerPort,
