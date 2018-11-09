@@ -12,7 +12,6 @@ public class P2PClient {
     int directoryServerPort;
     String uniqueName;
 
-    Socket transientServerSocket;
     Socket clientSocket;
 
     PrintWriter pw;

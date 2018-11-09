@@ -1,27 +1,73 @@
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.io.RandomAccessFile;
 import java.net.Socket;
 import java.util.Arrays;
 import java.util.Scanner;
 
-public class P2PTransientServer {
+public class P2PTransientServer implements Runnable {
 
-    Socket serverSocket;
+    String directoryServerIP;
+    int directoryServerPort;
+    String uniqueName;
 
-    public P2PTransientServer(Socket socket) {
-        serverSocket = socket;
+    Socket transientServerSocket;
+
+    PrintWriter pw;
+    Scanner sc;
+
+    String messageReceived;
+
+    // Constructor function for P2P transient server
+    public P2PTransientServer(String directoryServerIP, int directoryServerPort, String uniqueName) {
+        this.directoryServerIP = directoryServerIP;
+        this.directoryServerPort = directoryServerPort;
+        this.uniqueName = uniqueName;
     }
 
-    public void start() {
+    // Send a P2P transient server's unique name to the directory server during the initial connection
+    // This unique name is the same unique name as the P2P client which it is associated with
+    private void sendNameMessage() {
+        String toServer = Constant.COMMAND_NAME + Constant.MESSAGE_DELIMITER
+                + uniqueName + Constant.MESSAGE_DELIMITER
+                + Constant.TYPE_TRANSIENT_SOCKET + Constant.MESSAGE_DELIMITER;
+        pw.println(toServer);
+        pw.flush();
+
+        sc.nextLine();
+        messageReceived =  sc.nextLine();
+
+        if (messageReceived.equals(Constant.MESSAGE_ACK)) {
+            System.out.println("Unique name " + uniqueName + " successfully sent from transient server to directory server!");
+        } else {
+            System.err.println("Error: could not send unique name " + uniqueName + " to directory server!");
+        }
+    }
+
+    public void start() throws IOException {
+
+        // Create a transient server socket and connect to the directory server
+        transientServerSocket = new Socket(directoryServerIP, directoryServerPort);
+        System.out.println("P2P transient server connected to directory server: " + directoryServerIP
+                + " at port " + directoryServerPort + Constant.MESSAGE_DELIMITER);
+
+        // Open writer and scanner between p2p transient server and directory server
+        pw = new PrintWriter(transientServerSocket.getOutputStream(), true);
+        sc = new Scanner(transientServerSocket.getInputStream());
+
+        // Inform the directory server that this connection is to a P2P transient server
+        sendNameMessage();
 
         try{
-            Scanner fromClient = new Scanner(serverSocket.getInputStream());
+            Scanner fromClient = new Scanner(transientServerSocket.getInputStream());
 
-            String messageReceived = fromClient.nextLine();
+            // Open writer and scanner between p2p transient server and directory server
+            pw = new PrintWriter(transientServerSocket.getOutputStream(), true);
+            sc = new Scanner(transientServerSocket.getInputStream());
 
             while (true) {
-                // print public IP address of the client requesting for data
+                // Print public IP address of the client requesting for data
                 System.out.println("Data requested by " + messageReceived);
 
                 String[] temp = fromClient.nextLine().split(":");
@@ -31,7 +77,7 @@ public class P2PTransientServer {
                 fromClient.nextLine();
 
                 byte[] messageRequested = getRequestMessage(fileName, chunkNumber);
-                sendP2PResponse(serverSocket, messageRequested);
+                sendP2PResponse(transientServerSocket, messageRequested);
 
                 System.out.println("Sent " + fileName + " chunk " + chunkNumber);
 
@@ -83,6 +129,35 @@ public class P2PTransientServer {
       } catch (IOException ioe) {
           System.out.println(ioe.getMessage());
       }
+    }
+
+    @Override
+    public void run() {
+        System.out.println("New thread created to entertain the client " + clientIp(acceptedSocket) + "\n");
+        while (!acceptedSocket.isClosed()) {
+            handleClientSocket(acceptedSocket);
+        }
+        System.out.println(uniqueName + " " + clientIp(acceptedSocket) + " exits...\n");
+    }
+
+    public static void main(String[] args) {
+
+        // Check if the number of command line argument is 3
+        if (args.length != 3) {
+            System.err.println("Usage: java P2PTransientServer directoryServerIP directoryServerPort uniqueName");
+            System.exit(1);
+        }
+
+        String directoryServerIP = args[0];
+        int directoryServerPort = Integer.parseInt(args[1]);
+        String uniqueName = args[2];
+
+        try {
+            P2PTransientServer transientServer = new P2PTransientServer(directoryServerIP, directoryServerPort, uniqueName);
+            transientServer.start();
+        } catch (IOException ioe) {
+            ioe.printStackTrace();
+        }
     }
 
 }
