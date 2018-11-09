@@ -28,10 +28,9 @@ public class DirectoryServer implements Runnable {
         this.firstTable = firstTable;
         this.secondTable = secondTable;
     }
-    
-    private String getAckMessage() {
-        return Constant.MESSAGE_ACK + Constant.MESSAGE_DELIMITER;
-    }
+
+//======================================================================================================================
+//=============================== Functions for handling various COMMAND ===============================================
 
     private String getQueryReplyMessage(String filename) {
 
@@ -45,27 +44,12 @@ public class DirectoryServer implements Runnable {
             return message + Constant.MESSAGE_CHUNK_NOT_EXIST + Constant.MESSAGE_DELIMITER;
 
         } else {
-
-            System.out.println(filename + " exists!");
-
             return message
                     + randomlySelectedHost.getTransientServerSocket().getInetAddress()
                     + Constant.MESSAGE_DELIMITER
                     + randomlySelectedHost.getTransientServerSocket().getPort()
                     + Constant.MESSAGE_DELIMITER;
         }
-
-    }
-
-    private List<Host> getHostsOfChunk(String filename, int chunkNum) {
-        Chunk chunk = new Chunk(filename, chunkNum);
-        return firstTable.get(chunk);
-    }
-
-    private Host getRandomHost(String filename, int chunk) {
-        List<Host> listOfHosts = getHostsOfChunk(filename, chunk);
-        int randomNumber = (int) (Math.random() * listOfHosts.size());
-        return listOfHosts.get(randomNumber);
     }
 
     private String getListReplyMessage() {
@@ -95,26 +79,6 @@ public class DirectoryServer implements Runnable {
         return Constant.MESSAGE_GOODBYE + Constant.MESSAGE_DELIMITER;
     }
 
-    /**
-     * Send TCP message to client
-     */
-    private void send(Socket client, String messageToSend) {
-
-        // Empty message won't be sent
-        if(messageToSend.isEmpty()) {
-            return;
-        }
-
-        try {
-            System.out.println("Server is sending client: " + messageToSend);
-            PrintWriter writer = new PrintWriter(client.getOutputStream(), true);
-            writer.println(messageToSend);
-            writer.close();
-        } catch (IOException ioe) {
-            System.err.println(ioe.getMessage());
-        }
-    }
-
     private void handleInformMsg(String filename, int chunkNumber) {
 
         Host host = getHostOfCurrentThread();
@@ -135,14 +99,6 @@ public class DirectoryServer implements Runnable {
         }
         chunksOfTheHost.add(chunk);
         secondTable.put(host, chunksOfTheHost);
-    }
-
-    private Host getHostOfCurrentThread() {
-        Host host = hosts.get(uniqueName);
-        if(host == null || uniqueName == null) {
-            System.err.println("Host does not exist");
-        }
-        return host;
     }
 
     private void handleExitMsg() {
@@ -211,6 +167,59 @@ public class DirectoryServer implements Runnable {
         hosts.put(uniqueName, host);
     }
 
+    private void handleDownloadFile(String filename) {
+        // Send number of chunk to client
+        int numOfChunk = getNumOfChunk(filename);
+        send(acceptedSocket, "" + numOfChunk);
+
+        for(int i = 1; i <= numOfChunk; i++) {
+            // Pick a host that have the chunk of the file
+            Host randomlySelectedHost = getRandomHost(filename, i);
+            Socket transientSocket = randomlySelectedHost.getTransientServerSocket();
+
+            // Send DOWNLOAD command to the transient server
+            String command = Constant.COMMAND_DOWNLOAD + Constant.MESSAGE_DELIMITER
+                             + filename + Constant.MESSAGE_DELIMITER
+                             + i + Constant.MESSAGE_DELIMITER
+                             + uniqueName + Constant.MESSAGE_DELIMITER;
+            send(transientSocket, command);
+
+            // Set up semophore
+
+        }
+    }
+
+    private void handleUploadFile(String clientName, Socket transientServerSocket) {
+        // Get the target client
+        Host clientHost = getHost(clientName);
+        Socket clientSocket = clientHost.getClientSocket();
+
+        byte[] buffer = new byte[Constant.CHUNK_SIZE];
+        try {
+            // Receive data from transient server
+            int bytesRead = transientServerSocket.getInputStream().read(buffer);
+            if (bytesRead <= 0) { // Error when reading
+                System.err.println("Bytes read from transient server to " + clientName + " is " + bytesRead);
+            }
+            if (bytesRead != Constant.CHUNK_SIZE) {
+                // it is the case for the last packet
+                buffer = Arrays.copyOfRange(buffer, 0, bytesRead);
+            }
+
+            // Send data back to client
+            DataOutputStream toClient = new DataOutputStream(clientSocket.getOutputStream());
+            toClient.write(buffer);
+            toClient.flush();
+            toClient.close();
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+//======================================================================================================================
+//======================================= Functions for handling socket ================================================
+
     private String handleClientMsg(Socket client, String[] parsedClientMsg) {
 
         String type = parsedClientMsg[0];
@@ -275,6 +284,99 @@ public class DirectoryServer implements Runnable {
 
     }
 
+    private void handleClientSocket(Socket client) {
+        String messageFromClient = getMsgFromClient(client);
+
+        if (!messageFromClient.isEmpty()) {
+            System.out.println("Parsing client message...");
+            String[] parsedClientMsg = parse(messageFromClient);
+            
+            System.out.println("Preparing directory server reply...");
+            String reply = handleClientMsg(client, parsedClientMsg);
+
+            System.out.println("Sending directory server reply to " + clientIp(client));
+            send(client, reply);
+
+            printAllTables();
+        }
+    }
+
+    private void startWelcomeSocket() {
+        try {
+            ServerSocket serverSocket = new ServerSocket(Constant.DIR_SERVER_PORT);
+            System.out.println("The directory server is up and running...");
+
+            while(true) {
+                System.out.println("Waiting for new client connection...");
+                Socket clientSocket = serverSocket.accept();
+                System.out.println("New connection request from " + clientIp(clientSocket));
+
+                DirectoryServer newServer = new DirectoryServer(clientSocket, firstTable, secondTable);
+                new Thread(newServer).start();
+            }
+        } catch (IOException ioe) {
+            System.err.println(ioe.getMessage());
+        }
+    }
+
+    @Override
+    public void run() {
+        System.out.println("New thread created to entertain the client " + clientIp(acceptedSocket) + "\n");
+        while (!acceptedSocket.isClosed()) {
+            handleClientSocket(acceptedSocket);
+        }
+        System.out.println("Thread for " + uniqueName + " " + clientIp(acceptedSocket) + " is close...\n");
+    }
+
+    public static void main(String[] args) {
+        DirectoryServer directoryServer = new DirectoryServer();
+        directoryServer.startWelcomeSocket();
+    }
+
+//======================================================================================================================
+//======================================= Helper classes and functions =================================================
+
+    private String getAckMessage() {
+        return Constant.MESSAGE_ACK + Constant.MESSAGE_DELIMITER;
+    }
+
+    // Send TCP message to client
+    private void send(Socket client, String messageToSend) {
+
+        // Empty message won't be sent
+        if(messageToSend.isEmpty()) {
+            return;
+        }
+
+        try {
+            System.out.println("Server is sending client: " + messageToSend);
+            PrintWriter writer = new PrintWriter(client.getOutputStream(), true);
+            writer.println(messageToSend);
+            writer.close();
+        } catch (IOException ioe) {
+            System.err.println(ioe.getMessage());
+        }
+    }
+
+    private List<Host> getHostsOfChunk(String filename, int chunkNum) {
+        Chunk chunk = new Chunk(filename, chunkNum);
+        return firstTable.get(chunk);
+    }
+
+    private Host getRandomHost(String filename, int chunk) {
+        List<Host> listOfHosts = getHostsOfChunk(filename, chunk);
+        int randomNumber = (int) (Math.random() * listOfHosts.size());
+        return listOfHosts.get(randomNumber);
+    }
+
+    private Host getHostOfCurrentThread() {
+        Host host = hosts.get(uniqueName);
+        if(host == null || uniqueName == null) {
+            System.err.println("Host does not exist");
+        }
+        return host;
+    }
+
     private int getNumOfChunk(String fileName) {
         int chunk = 0;
         while(true) {
@@ -283,61 +385,6 @@ public class DirectoryServer implements Runnable {
             } else {
                 return chunk;
             }
-        }
-    }
-
-    private void handleDownloadFile(String filename) {
-        // Send number of chunk to client
-        int numOfChunk = getNumOfChunk(filename);
-        send(acceptedSocket, "" + numOfChunk);
-
-        for(int i = 1; i <= numOfChunk; i++) {
-            // Pick a host that have the chunk of the file
-            Host randomlySelectedHost = getRandomHost(filename, i);
-            Socket transientSocket = randomlySelectedHost.getTransientServerSocket();
-
-            // Send DOWNLOAD command to the transient server
-            String command = Constant.COMMAND_DOWNLOAD + Constant.MESSAGE_DELIMITER
-                             + filename + Constant.MESSAGE_DELIMITER
-                             + i + Constant.MESSAGE_DELIMITER
-                             + uniqueName + Constant.MESSAGE_DELIMITER;
-            send(transientSocket, command);
-
-            // Set up semophore
-
-        }
-    }
-
-    private Host getHost(String name) {
-        Host host = hosts.get(name);
-        if(host == null) {
-            System.err.println("Host " + name + " does not exist");
-        }
-        return host;
-    }
-
-    private void handleUploadFile(String clientName, Socket transientServerSocket) {
-        // Get the target client
-        Host clientHost = getHost(clientName);
-        Socket clientSocket = clientHost.getClientSocket();
-
-        byte[] buffer = new byte[Constant.CHUNK_SIZE];
-        try {
-            // Receive data from transient server
-            int bytesRead = transientServerSocket.getInputStream().read(buffer);
-            if (bytesRead != Constant.CHUNK_SIZE) {
-                // it is the case for the last packet
-                buffer = Arrays.copyOfRange(buffer, 0, bytesRead);
-            }
-
-            // Send data back to client
-            DataOutputStream toClient = new DataOutputStream(clientSocket.getOutputStream());
-            toClient.write(buffer);
-            toClient.flush();
-            toClient.close();
-
-        } catch (IOException e) {
-            e.printStackTrace();
         }
     }
 
@@ -365,63 +412,61 @@ public class DirectoryServer implements Runnable {
         return messageFromClient;
     }
 
-    private void handleClientSocket(Socket client) {
-        String messageFromClient = getMsgFromClient(client);
-
-        if (!messageFromClient.isEmpty()) {
-            System.out.println("Parsing client message...");
-            String[] parsedClientMsg = parse(messageFromClient);
-            
-            System.out.println("Preparing directory server reply...");
-            String reply = handleClientMsg(client, parsedClientMsg);
-
-            System.out.println("Sending directory server reply to " + clientIp(client));
-            send(client, reply);
-        }
-    }
-
-    private void startWelcomeSocket() {
-        try {
-            ServerSocket serverSocket = new ServerSocket(Constant.DIR_SERVER_PORT);
-            System.out.println("The directory server is up and running...");
-
-            while(true) {
-                System.out.println("Waiting for new client connection...");
-                Socket clientSocket = serverSocket.accept();
-                System.out.println("New connection request from " + clientIp(clientSocket));
-
-                DirectoryServer newServer = new DirectoryServer(clientSocket, firstTable, secondTable);
-                new Thread(newServer).start();
-            }
-        } catch (IOException ioe) {
-            System.err.println(ioe.getMessage());
-        }
-    }
-
     private String clientIp(Socket socket) {
         return socket.getInetAddress().toString() + ":" + socket.getPort();
-    }
-
-    @Override
-    public void run() {
-        System.out.println("New thread created to entertain the client " + clientIp(acceptedSocket) + "\n");
-        while (!acceptedSocket.isClosed()) {
-            handleClientSocket(acceptedSocket);
-        }
-        System.out.println("Thread for " + uniqueName + " " + clientIp(acceptedSocket) + " is close...\n");
     }
 
     private String[] parse(String message) {
         return message.split(Constant.MESSAGE_DELIMITER);
     }
 
-    public static void main(String[] args) {
-        DirectoryServer directoryServer = new DirectoryServer();
-        directoryServer.startWelcomeSocket();
+    private Host getHost(String name) {
+        Host host = hosts.get(name);
+        if(host == null) {
+            System.err.println("Host " + name + " does not exist");
+        }
+        return host;
     }
 
-//======================================================================================================================
-//============================================= Helper classes==========================================================
+    private void printAllTables() {
+        printAllHosts();
+        printFirstTableContent();
+        printSecondTableContent();
+    }
+
+    private void printAllHosts() {
+        System.out.println("\n All hosts:\n");
+        System.out.println(Arrays.toString(hosts.keySet().toArray()));
+    }
+
+    private void printFirstTableContent() {
+        HashMap<Chunk, List<Host>> table = firstTable;
+        String s = "";
+        for (Chunk chunk: table.keySet()) {
+            s += chunk.filename + " " + chunk.chunkNumber + "is at: \n";
+            for(Host host: table.get(chunk)) {
+                s += host.getUniqueName();
+            }
+            s += "\n";
+        }
+        System.out.println("\nFirst table content:");
+        System.out.println(s);
+    }
+
+    private void printSecondTableContent() {
+        HashMap<Host, List<Chunk>> table = secondTable;
+        String s = "";
+        for (Host host: table.keySet()) {
+            s += host.getUniqueName() + " has:\n";
+            for(Chunk chunk: table.get(host)) {
+                s += chunk.filename + " " + chunk.chunkNumber + " ";
+            }
+            s += "\n";
+        }
+        System.out.println("Second table content:");
+        System.out.println(s);
+    }
+
     private class Chunk {
         private String filename;
 
