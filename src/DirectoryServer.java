@@ -410,10 +410,11 @@ public class DirectoryServer implements Runnable {
     private int getNumOfChunk(String fileName) {
         int chunk = 0;
         while(true) {
-            if(getHostsOfChunk(fileName, chunk + 1) != null) {
-                chunk++;
-            } else {
+            if(getHostsOfChunk(fileName, chunk + 1) == null
+                    || getHostsOfChunk(fileName, chunk + 1).isEmpty()) {
                 return chunk;
+            } else {
+                chunk++;
             }
         }
     }
