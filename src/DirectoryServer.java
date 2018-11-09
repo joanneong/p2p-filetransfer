@@ -606,9 +606,13 @@ public class DirectoryServer implements Runnable {
 
         @Override
         public String toString() {
-            return "Name: " + uniqueName
-                    + "Client: " + clientIp(clientSocket)
-                    + "Transient: " + clientIp(transientServerSocket);
+            if(clientSocket == null || transientServerSocket == null) {
+                return "Name: " + uniqueName;
+            } else {
+                return "Name: " + uniqueName
+                        + "Client: " + clientIp(clientSocket)
+                        + "Transient: " + clientIp(transientServerSocket);
+            }
         }
     }
 
