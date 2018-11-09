@@ -10,8 +10,8 @@ public class DirectoryServer implements Runnable {
     private HashMap<Host, List<Chunk>> secondTable;
     private Socket acceptedSocket;
     private HashMap<String, Host> hosts;
-
     private String uniqueName;
+    private HashMap<String, Boolean> semaphores; // Mapping: unique name & semaphore
 
     /**
      * Constructors
@@ -23,14 +23,17 @@ public class DirectoryServer implements Runnable {
     }
 
     public DirectoryServer(Socket acceptedSocket, HashMap<Chunk, List<Host>> firstTable,
-                           HashMap<Host, List<Chunk>> secondTable) {
+                           HashMap<Host, List<Chunk>> secondTable, HashMap<String, Host> hosts,
+                           HashMap<String, Boolean> semaphores) {
         this.acceptedSocket = acceptedSocket;
         this.firstTable = firstTable;
         this.secondTable = secondTable;
+        this.hosts = hosts;
+        this.semaphores = semaphores;
     }
 
 //======================================================================================================================
-//=============================== Functions for handling various COMMAND ===============================================
+//=============================== Functions for handling various COMMANDs ==============================================
 
     private String getQueryReplyMessage(String filename) {
 
@@ -134,7 +137,7 @@ public class DirectoryServer implements Runnable {
         }
 
         // Remove host from hosts table
-        hosts.remove(uniqueName);
+        hosts.remove(getUniqueNameOfThread());
     }
 
     private void handleNameMsg(Socket socket, String uniqueName, String type) {
@@ -181,11 +184,20 @@ public class DirectoryServer implements Runnable {
             String command = Constant.COMMAND_DOWNLOAD + Constant.MESSAGE_DELIMITER
                              + filename + Constant.MESSAGE_DELIMITER
                              + i + Constant.MESSAGE_DELIMITER
-                             + uniqueName + Constant.MESSAGE_DELIMITER;
+                             + getUniqueNameOfThread() + Constant.MESSAGE_DELIMITER;
             send(transientSocket, command);
 
             // Set up semophore
+            setSemaphore(getUniqueNameOfThread());
 
+            // Wait for semaphore
+            while(!isSemaphoreReleased(getUniqueNameOfThread())) {
+                try {
+                    Thread.sleep(100);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
         }
     }
 
@@ -212,6 +224,7 @@ public class DirectoryServer implements Runnable {
             toClient.flush();
             toClient.close();
 
+            releaseSemaphore(getUniqueNameOfThread());
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -311,7 +324,8 @@ public class DirectoryServer implements Runnable {
                 Socket clientSocket = serverSocket.accept();
                 System.out.println("New connection request from " + clientIp(clientSocket));
 
-                DirectoryServer newServer = new DirectoryServer(clientSocket, firstTable, secondTable);
+                DirectoryServer newServer = new DirectoryServer(clientSocket, firstTable,
+                                                                secondTable, hosts, semaphores);
                 new Thread(newServer).start();
             }
         } catch (IOException ioe) {
@@ -335,6 +349,31 @@ public class DirectoryServer implements Runnable {
 
 //======================================================================================================================
 //======================================= Helper classes and functions =================================================
+
+    private String getUniqueNameOfThread() {
+        if(uniqueName == null) {
+            System.err.println("Unique name is null!");
+        }
+        return uniqueName;
+    }
+
+    private void setSemaphore(String uniqueName) {
+        System.out.println("Set semaphore of " + getUniqueNameOfThread());
+        semaphores.put(getUniqueNameOfThread(), true);
+    }
+
+    private void releaseSemaphore(String uniqueName) {
+        System.out.println("Release semaphore of " + getUniqueNameOfThread());
+        semaphores.put(getUniqueNameOfThread(), false);
+    }
+
+    private Boolean isSemaphoreReleased(String uniqueName) {
+         Boolean isReleased = semaphores.get(getUniqueNameOfThread());
+         if(isReleased == null) {
+             System.err.println("Semaphore of " + getUniqueNameOfThread() + " is null!");
+         }
+         return isReleased;
+    }
 
     private String getAckMessage() {
         return Constant.MESSAGE_ACK + Constant.MESSAGE_DELIMITER;
@@ -370,8 +409,8 @@ public class DirectoryServer implements Runnable {
     }
 
     private Host getHostOfCurrentThread() {
-        Host host = hosts.get(uniqueName);
-        if(host == null || uniqueName == null) {
+        Host host = hosts.get(getUniqueNameOfThread());
+        if(host == null) {
             System.err.println("Host does not exist");
         }
         return host;
