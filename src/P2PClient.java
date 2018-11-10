@@ -4,8 +4,8 @@ import java.util.Scanner;
 
 public class P2PClient {
 
-    String directoryServerIP;
-    int directoryServerPort;
+    static String directoryServerIP;
+    static int directoryServerPort;
     String uniqueName;
 
     Socket clientSocket;
@@ -14,9 +14,7 @@ public class P2PClient {
     Scanner sc;
 
     // Constructor function for a new P2P client
-    P2PClient(String directoryServerIP, int directoryServerPort, String uniqueName) {
-        this.directoryServerIP = directoryServerIP;
-        this.directoryServerPort = directoryServerPort;
+    P2PClient(String uniqueName) {
         this.uniqueName = uniqueName;
     }
 
@@ -87,7 +85,7 @@ public class P2PClient {
             String p2pServerPort = message[2];
 
             return "File " + fileName + " found at port " + p2pServerPort + " of P2P server "
-                    + p2pServerIP + Constant.MESSAGE_DELIMITER;
+                    + p2pServerIP + "\n";
         }
     }
 
@@ -96,6 +94,8 @@ public class P2PClient {
 
         // Check if the client already owns the file
         boolean isExist = new File(Constant.DEFAULT_DIRECTORY + fileName).exists();
+        // boolean isExist = new File("temp/" + fileName).exists(); // for self testing
+
         if (isExist) {
             return Constant.ERROR_DOWNLOAD_FILE_EXIST;
         }
@@ -111,13 +111,17 @@ public class P2PClient {
 
         // Check if the file exists (to the directory server's knowledge)
         if (totalChunksToReceive == 0) {
-            File file = new File(Constant.DEFAULT_DIRECTORY + fileName);
+            File file = new File(Constant.DEFAULT_DIRECTORY  + fileName);
+            // File file = new File("temp/"  + fileName); // for self testing
+
             file.delete();
             return Constant.ERROR_DOWNLOAD_FILE_NOT_EXIST;
         }
 
         // Prepare to write received file contents
-        FileOutputStream fos = new FileOutputStream(Constant.DEFAULT_DIRECTORY + fileName);
+        FileOutputStream fos = new FileOutputStream(Constant.DEFAULT_DIRECTORY  + fileName);
+        // FileOutputStream fos = new FileOutputStream("temp/"  + fileName); // for self testing
+        
         BufferedOutputStream bos = new BufferedOutputStream(fos);
 
         // Write file contents to new file
@@ -137,7 +141,7 @@ public class P2PClient {
         for (int i = 1; i <= totalChunksToReceive; i++) {
             sendInformMessage(fileName, i);
         }
-        return "File " + fileName + " downloaded from peer server" + Constant.MESSAGE_DELIMITER;
+        return "File " + fileName + " downloaded from peer server\n";
     }
 
     // Get a list of all available files from the directory server
@@ -148,16 +152,16 @@ public class P2PClient {
         pw.flush();
 
         StringBuilder replyMessage = new StringBuilder();
-        replyMessage.append("File list:").append(Constant.MESSAGE_DELIMITER);
+        replyMessage.append("File list:").append("\n");
 
         String[] message = getMessageFromClientSocket(clientSocket);
 
         if (message[1].equals(Constant.MESSAGE_FILE_LIST_EMPTY)) {
-            replyMessage.append("There is no file available").append(Constant.MESSAGE_DELIMITER);
+            replyMessage.append("There is no file available").append("\n");
         } else {
             int fileCount = Integer.parseInt(message[1]);
             for (int i = 0; i < fileCount; i++) {
-                replyMessage.append(message[i + 2]).append(Constant.MESSAGE_DELIMITER);
+                replyMessage.append(message[i + 2]).append("\n");
             }
         }
 
@@ -175,7 +179,8 @@ public class P2PClient {
 
         // Create a client socket and connect to the directory server
         clientSocket = new Socket(directoryServerIP, directoryServerPort);
-        System.out.println("P2P client connected to directory server: " + directoryServerIP + " at port " + directoryServerPort);
+        System.out.println("P2P client connected to directory server: "
+                + directoryServerIP + " at port " + directoryServerPort);
 
         // Open writer and scanner between p2p client and directory server
         pw = new PrintWriter(clientSocket.getOutputStream(), true);
@@ -263,12 +268,12 @@ public class P2PClient {
             System.exit(1);
         }
 
-        String directoryServerIP = args[0];
-        int directoryServerPort = Integer.parseInt(args[1]);
+        P2PClient.directoryServerIP = args[0];
+        P2PClient.directoryServerPort = Integer.parseInt(args[1]);
         String uniqueName = args[2];
 
         try {
-            P2PClient client = new P2PClient(directoryServerIP, directoryServerPort, uniqueName);
+            P2PClient client = new P2PClient(uniqueName);
             client.start();
         } catch (IOException ioe) {
             ioe.printStackTrace();
