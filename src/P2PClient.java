@@ -121,7 +121,7 @@ public class P2PClient {
         // Prepare to write received file contents
         FileOutputStream fos = new FileOutputStream(Constant.DEFAULT_DIRECTORY  + fileName);
         // FileOutputStream fos = new FileOutputStream("temp/"  + fileName); // for self testing
-        
+
         BufferedOutputStream bos = new BufferedOutputStream(fos);
 
         // Write file contents to new file

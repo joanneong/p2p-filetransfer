@@ -6,25 +6,39 @@ import java.util.stream.Collectors;
 
 public class DirectoryServer implements Runnable {
 
+    // Tables stored information
     private static HashMap<Chunk, List<Host>> firstTable;
     private static HashMap<Host, List<Chunk>> secondTable;
     private static HashMap<String, Host> hosts;
-    private static HashMap<String, Boolean> semaphores; // Mapping: unique name & semaphore
+
+    // Used to make sure data relaid is in order,
+    // i.e. always requesting one chunk at a time in one thread
+    // Mapping: unique name of the user requesting the file & boolean
+    private static HashMap<String, Boolean> realyDataSemaphores;
+
+    // Used to make sure directory server send only one command to transient socket at a time
+    // Other wise transient socket may ignore some commands of the commands arrived at the same time
+    // Mapping: unique name of the transient server & boolean
+    private static HashMap<String, Boolean> transientSocketSemaphores;
+
+    // Boolean values used in semaphore
     private static final boolean IS_WAITING = true;
     private static final boolean IS_RELEASED = false;
 
+    // Values that are unique in every thread
     private Socket acceptedSocket;
     private String uniqueName;
-    /**
-     * Constructors
-     */
+
+    // Constructor for main thread
     public DirectoryServer() {
-        this.firstTable = new HashMap<>();
-        this.secondTable = new HashMap<>();
-        this.hosts = new HashMap<>();
-        this.semaphores = new HashMap<>();
+        firstTable = new HashMap<>();
+        secondTable = new HashMap<>();
+        hosts = new HashMap<>();
+        realyDataSemaphores = new HashMap<>();
+        transientSocketSemaphores = new HashMap<>();
     }
 
+    // Constructor for creating a new thread
     public DirectoryServer(Socket acceptedSocket) {
         this.acceptedSocket = acceptedSocket;
     }
@@ -141,31 +155,31 @@ public class DirectoryServer implements Runnable {
         // Send number of chunk to client
         int numOfChunk = getNumOfChunk(filename);
         send(acceptedSocket, "" + numOfChunk + Constant.MESSAGE_DELIMITER);
+        String clientName = getUniqueNameOfThread();
 
         for(int i = 1; i <= numOfChunk; i++) {
+
             // Pick a host that have the chunk of the file
             Host randomlySelectedHost = getRandomHost(filename, i);
             Socket transientSocket = randomlySelectedHost.getTransientServerSocket();
+            String transientServerName = randomlySelectedHost.uniqueName;
 
             // Send DOWNLOAD command to the transient server
             String command = Constant.COMMAND_DOWNLOAD + Constant.MESSAGE_DELIMITER
                              + filename + Constant.MESSAGE_DELIMITER
                              + i + Constant.MESSAGE_DELIMITER
                              + getUniqueNameOfThread() + Constant.MESSAGE_DELIMITER;
+
+            // Wait for semaphore for sending command to transient server
+            waitSemaphore(transientServerName, transientSocketSemaphores, "Transient Socket");
+            lockSemaphore(transientServerName, transientSocketSemaphores, "Transient Socket");
+
+            // Send command when socket is free
             send(transientSocket, command);
 
-            // Set up semaphore
-            waitSemaphore(getUniqueNameOfThread());
-
-            // Wait for semaphore
-            while(!isSemaphoreReleased(getUniqueNameOfThread())) {
-                try {
-                    System.out.println("Waiting for " + getUniqueNameOfThread());
-                    Thread.sleep(100);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-            }
+            // Set up semaphore for relaying data
+            lockSemaphore(clientName, realyDataSemaphores, "Relay");
+            waitSemaphore(clientName, realyDataSemaphores, "Relay");
         }
     }
 
@@ -198,7 +212,7 @@ public class DirectoryServer implements Runnable {
             toClient.write(buffer);
             toClient.flush();
 
-            releaseSemaphore(clientName);
+            releaseSemaphore(clientName, realyDataSemaphores, "Relay");
 
             transientServerSocket.close();
 
@@ -253,7 +267,7 @@ public class DirectoryServer implements Runnable {
 
         String type = parsedClientMsg[0];
         System.out.println("Client message has type: " + type);
-        String returnMessage;
+        String returnMessage = "";
 
         switch(type) {
             case Constant.COMMAND_NAME:
@@ -299,6 +313,11 @@ public class DirectoryServer implements Runnable {
 
             case Constant.COMMAND_LIST:
                 returnMessage = getListReplyMessage();
+                break;
+
+            case Constant.MESSAGE_ACK:
+                String transientServerName = parsedClientMsg[1];
+                releaseSemaphore(transientServerName, transientSocketSemaphores, "Transient Socket");
                 break;
 
             case Constant.COMMAND_EXIT:
@@ -367,6 +386,18 @@ public class DirectoryServer implements Runnable {
 //======================================================================================================================
 //======================================= Helper classes and functions =================================================
 
+    // Get ACK from transient server
+    private void getACKFromTransientServer(Socket transientSocket) {
+        System.out.println("Getting ack...");
+        String[] message = getMessageFromClientSocket(transientSocket);
+        System.out.println("Got ack");
+        if (message[0].equals(Constant.MESSAGE_ACK)) {
+            System.out.println("DOWNLOAD command is successfully acknowledged by transient server");
+        } else {
+            System.err.println("Error receiving ACK of DOWNLOAD command from transient server");
+        }
+    }
+
     private String[] parse(String message) {
         return message.split(Constant.MESSAGE_DELIMITER);
     }
@@ -394,6 +425,14 @@ public class DirectoryServer implements Runnable {
             System.err.println(e.getMessage());
         }
         return messageFromClient;
+    }
+
+    private String[] getMessageFromClientSocket(Socket client) {
+        String messageFromClient = getMsgFromClient(client);
+
+        String[] parsedClientMsg = parse(messageFromClient);
+
+        return parsedClientMsg;
     }
 
     // Send TCP message to client
@@ -457,22 +496,33 @@ public class DirectoryServer implements Runnable {
         return uniqueName;
     }
 
-    private void waitSemaphore(String uniqueName) {
-        System.out.println("Set semaphore of " + uniqueName);
-        semaphores.put(uniqueName, IS_WAITING);
+    private void lockSemaphore(String uniqueName, HashMap<String, Boolean> semaphore, String type) {
+        System.out.println("Set " + type + " semaphore of " + uniqueName);
+        semaphore.put(uniqueName, IS_WAITING);
     }
 
-    private Boolean isSemaphoreReleased(String uniqueName) {
-        Boolean status = semaphores.get(uniqueName);
+    private Boolean isSemaphoreReleased(String uniqueName, HashMap<String, Boolean> semaphore, String type) {
+        Boolean status = semaphore.get(uniqueName);
         if(status == null) {
-            System.err.println("Semaphore of " + uniqueName + " is null!");
+            System.err.println(type + "semaphore of " + uniqueName + " is null!");
         }
-        return status == IS_RELEASED;
+        return status == null || status == IS_RELEASED;
     }
 
-    private void releaseSemaphore(String uniqueName) {
-        System.out.println("Release semaphore of " + uniqueName);
-        semaphores.put(uniqueName, IS_RELEASED);
+    private void releaseSemaphore(String uniqueName, HashMap<String, Boolean> semaphore, String type) {
+        System.out.println("Release " + type + " semaphore of " + uniqueName);
+        semaphore.put(uniqueName, IS_RELEASED);
+    }
+
+    private void waitSemaphore(String uniqueName, HashMap<String, Boolean> semaphore, String type) {
+        while(!isSemaphoreReleased(uniqueName, semaphore, type)) {
+            try {
+                System.out.println("Waiting " + type + " semaphore of " + uniqueName);
+                Thread.sleep(100);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
     }
 
     private void printAllTables() {
@@ -619,13 +669,20 @@ public class DirectoryServer implements Runnable {
 
         @Override
         public String toString() {
-            if(clientSocket == null || transientServerSocket == null) {
-                return "Name: " + uniqueName;
-            } else {
-                return "Name: " + uniqueName
-                        + " Client: " + clientIp(clientSocket)
-                        + " Transient: " + clientIp(transientServerSocket) + "\n";
+            String client = "";
+            if(clientSocket != null) {
+                client = clientIp(clientSocket);
             }
+
+            String transientS = "";
+            if(transientServerSocket != null) {
+                transientS = clientIp(transientServerSocket);
+            }
+
+            return "Name: " + uniqueName
+                    + " Client: " + client
+                    + " Transient: " + transientS
+                    + "\n";
         }
     }
 

@@ -9,7 +9,7 @@ public class P2PTransientServer implements Runnable {
     static int directoryServerPort;
     String uniqueName;
 
-    Socket transientServerSocket;
+    Socket uniqueSocket;
 
     PrintWriter pw;
     Scanner sc;
@@ -18,7 +18,6 @@ public class P2PTransientServer implements Runnable {
     String requestFilename;
     int requestChunkNum;
     String requestUniqueName;
-    Socket directoryServerSocket;
 
     // Constructor function for P2P transient server
     public P2PTransientServer(String uniqueName) {
@@ -26,11 +25,12 @@ public class P2PTransientServer implements Runnable {
     }
 
     public P2PTransientServer(String requestFilename, int requestChunkNum, String requestUniqueName,
-                              Socket directoryServerSocket) {
+                              Socket uniqueSocket, String uniqueName) {
         this.requestFilename = requestFilename;
         this.requestChunkNum = requestChunkNum;
         this.requestUniqueName = requestUniqueName;
-        this.directoryServerSocket = directoryServerSocket;
+        this.uniqueSocket = uniqueSocket;
+        this.uniqueName = uniqueName;
     }
 
     // Send a P2P transient server's unique name to the directory server during the initial connection
@@ -42,7 +42,7 @@ public class P2PTransientServer implements Runnable {
         pw.println(toServer);
         pw.flush();
 
-        String[] message = getMessageFromClientSocket(transientServerSocket);
+        String[] message = getMessageFromClientSocket(uniqueSocket);
 
         if (message[0].equals(Constant.MESSAGE_ACK)) {
             System.out.println("Unique name " + uniqueName + " successfully sent to directory server!");
@@ -54,22 +54,21 @@ public class P2PTransientServer implements Runnable {
     public void start() throws IOException {
 
         // Create a transient server socket and connect to the directory server
-        transientServerSocket = new Socket(directoryServerIP, directoryServerPort);
+        uniqueSocket = new Socket(directoryServerIP, directoryServerPort);
         System.out.println("P2P transient server connected to directory server: " + directoryServerIP
                 + " at port " + directoryServerPort + Constant.MESSAGE_DELIMITER);
 
         // Open writer and scanner between p2p transient server and directory server
-        pw = new PrintWriter(transientServerSocket.getOutputStream(), true);
-        sc = new Scanner(transientServerSocket.getInputStream());
+        pw = new PrintWriter(uniqueSocket.getOutputStream(), true);
+        sc = new Scanner(uniqueSocket.getInputStream());
 
         // Inform the directory server that this connection is to a P2P transient server
         sendNameMessage();
 
         // Listen to incoming
         while(true) {
-            handleClientSocket(transientServerSocket);
+            handleClientSocket(uniqueSocket);
         }
-
     }
 
     private void handleClientSocket(Socket client) {
@@ -96,7 +95,8 @@ public class P2PTransientServer implements Runnable {
                 String clientUniqueName = parsedClientMsg[3];
 
                 // Create new thread to handel download command
-                P2PTransientServer newServer = new P2PTransientServer(filename, chunkNumber, clientUniqueName, client);
+                P2PTransientServer newServer = new P2PTransientServer(filename, chunkNumber,
+                                                                        clientUniqueName, client, uniqueName);
                 new Thread(newServer).start();
                 break;
 
@@ -110,6 +110,10 @@ public class P2PTransientServer implements Runnable {
     }
 
     private void handleDownloadMsg(String filename, int chunkNumber, String clientUniqueName) {
+
+        // Send ACK to acknowledge receiving DOWNLOAD command
+        send(uniqueSocket, getAckMessage() + uniqueName + Constant.MESSAGE_DELIMITER);
+
         String messageToSend = Constant.COMMAND_UPLOAD + Constant.MESSAGE_DELIMITER
                                 + clientUniqueName + Constant.MESSAGE_DELIMITER;
         try {
@@ -239,10 +243,6 @@ public class P2PTransientServer implements Runnable {
         return messageFromClient;
     }
 
-    private String clientIp(Socket socket) {
-        return socket.getInetAddress().toString() + ":" + socket.getPort();
-    }
-
     private String[] parse(String message) {
         return message.split(Constant.MESSAGE_DELIMITER);
     }
@@ -253,6 +253,10 @@ public class P2PTransientServer implements Runnable {
         String[] parsedClientMsg = parse(messageFromClient);
 
         return parsedClientMsg;
+    }
+
+    private String getAckMessage() {
+        return Constant.MESSAGE_ACK + Constant.MESSAGE_DELIMITER;
     }
 
 }
