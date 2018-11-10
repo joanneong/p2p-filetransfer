@@ -386,18 +386,6 @@ public class DirectoryServer implements Runnable {
 //======================================================================================================================
 //======================================= Helper classes and functions =================================================
 
-    // Get ACK from transient server
-    private void getACKFromTransientServer(Socket transientSocket) {
-        System.out.println("Getting ack...");
-        String[] message = getMessageFromClientSocket(transientSocket);
-        System.out.println("Got ack");
-        if (message[0].equals(Constant.MESSAGE_ACK)) {
-            System.out.println("DOWNLOAD command is successfully acknowledged by transient server");
-        } else {
-            System.err.println("Error receiving ACK of DOWNLOAD command from transient server");
-        }
-    }
-
     private String[] parse(String message) {
         return message.split(Constant.MESSAGE_DELIMITER);
     }
@@ -425,14 +413,6 @@ public class DirectoryServer implements Runnable {
             System.err.println(e.getMessage());
         }
         return messageFromClient;
-    }
-
-    private String[] getMessageFromClientSocket(Socket client) {
-        String messageFromClient = getMsgFromClient(client);
-
-        String[] parsedClientMsg = parse(messageFromClient);
-
-        return parsedClientMsg;
     }
 
     // Send TCP message to client
