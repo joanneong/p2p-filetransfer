@@ -38,14 +38,19 @@ public class P2PClient {
     // Get the total number of chunks in a file
     private int getNumberOfChunks(String fileName) {
 
-        File f = new File(Constant.DEFAULT_DIRECTORY + fileName);
-        int fileLength = (int) f.length();
+        int fileLength = getFileSize(fileName);
         int chunkCount = fileLength / Constant.CHUNK_SIZE;
 
         if (fileLength > (chunkCount * Constant.CHUNK_SIZE)) {
             chunkCount = chunkCount + 1;
         }
         return chunkCount;
+    }
+
+    private int getFileSize(String fileName) {
+        File f = new File(Constant.DEFAULT_DIRECTORY + fileName);
+        int fileLength = (int) f.length();
+        return fileLength;
     }
 
     // Inform the directory server that the client owns a file and chunk
@@ -62,6 +67,25 @@ public class P2PClient {
 
         if (message[0].equals(Constant.MESSAGE_ACK)) {
             return "File " + fileName + " chunk " + chunkNumber + " informed to directory server\n";
+        } else {
+            return Constant.ERROR_CLIENT_INFORM_FAILED;
+        }
+    }
+
+    // Inform the directory server the file size of a file
+    private String sendFileSizeMessage(String fileName, int filesize) {
+
+        String toServer = Constant.COMMAND_FILESIZIE + Constant.MESSAGE_DELIMITER
+                + fileName + Constant.MESSAGE_DELIMITER
+                + filesize + Constant.MESSAGE_DELIMITER;
+        pw.println(toServer);
+        pw.flush();
+
+        String[] message = getMessageFromClientSocket(clientSocket);
+        System.out.println("Inform file size " + filesize + " to directory server: " + message[0]);
+
+        if (message[0].equals(Constant.MESSAGE_ACK)) {
+            return "File " + fileName + " file size " + filesize + " informed to directory server\n";
         } else {
             return Constant.ERROR_CLIENT_INFORM_FAILED;
         }
@@ -107,14 +131,10 @@ public class P2PClient {
 
         // Get the total number of chunks to expect from the directory server
         String[] message = getMessageFromClientSocket(clientSocket);
-        int totalChunksToReceive = Integer.parseInt(message[0]);
+        int totalBytesToReceive = Integer.parseInt(message[0]);
 
         // Check if the file exists (to the directory server's knowledge)
-        if (totalChunksToReceive == 0) {
-            // File file = new File(Constant.DEFAULT_DIRECTORY  + fileName);
-            // File file = new File("temp/"  + fileName); // for self testing
-
-            // file.delete();
+        if (totalBytesToReceive == 0) {
             return Constant.ERROR_DOWNLOAD_FILE_NOT_EXIST;
         }
 
@@ -124,21 +144,24 @@ public class P2PClient {
 
         BufferedOutputStream bos = new BufferedOutputStream(fos);
 
+        int bytesToReceive = 0;
         // Write file contents to new file
-        for (int i = 1; i <= totalChunksToReceive; i++) {
+        while (bytesToReceive < totalBytesToReceive) {
             byte[] buffer = new byte[Constant.CHUNK_SIZE];
             int bytesRead = clientSocket.getInputStream().read(buffer);
+            bytesToReceive += bytesRead;
 
-            bos.write(buffer, 0, bytesRead);
+            bos.write(buffer);
             bos.flush();
 
-            System.out.println("Downloaded " + fileName + " chunk " + i);
+            System.out.println("Downloaded " + fileName + " read " + bytesRead + " total " + bytesToReceive );
         }
 
         bos.close();
 
+        int numOfChunks = bytesToReceive/Constant.CHUNK_SIZE;
         // Only inform the directory server after the whole file has been downloaded
-        for (int i = 1; i <= totalChunksToReceive; i++) {
+        for (int i = 1; i <= numOfChunks; i++) {
             sendInformMessage(fileName, i);
         }
         return "File " + fileName + " downloaded from peer server\n";
@@ -147,7 +170,7 @@ public class P2PClient {
     // Get a list of all available files from the directory server
     private String sendListMessage() {
 
-        String toServer = Constant.COMMAND_LIST;
+        String toServer = Constant.COMMAND_LIST + Constant.MESSAGE_DELIMITER;
         pw.println(toServer);
         pw.flush();
 
@@ -170,7 +193,7 @@ public class P2PClient {
 
     // Send exit message to the directory server
     private void sendExitMessage() {
-        String toServer = Constant.COMMAND_EXIT;
+        String toServer = Constant.COMMAND_EXIT + Constant.MESSAGE_DELIMITER;
         pw.println(toServer);
         pw.flush();
     }
@@ -219,6 +242,9 @@ public class P2PClient {
                             break;
                         }
                     }
+
+                    // Also send file size
+                    System.out.println(sendFileSizeMessage(fileName, getFileSize(fileName)));
                     System.out.println(replyMessage);
                     break;
 

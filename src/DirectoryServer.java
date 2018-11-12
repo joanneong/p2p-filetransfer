@@ -10,6 +10,7 @@ public class DirectoryServer implements Runnable {
     private static HashMap<Chunk, List<Host>> firstTable;
     private static HashMap<Host, List<Chunk>> secondTable;
     private static HashMap<String, Host> hosts;
+    private static HashMap<String, Integer> filesizes;
 
     // Used to make sure data relaid is in order,
     // i.e. always requesting one chunk at a time in one thread
@@ -152,11 +153,12 @@ public class DirectoryServer implements Runnable {
     }
 
     private void handleDownloadFile(String filename) {
-        // Send number of chunk to client
-        int numOfChunk = getNumOfChunk(filename);
-        send(acceptedSocket, "" + numOfChunk + Constant.MESSAGE_DELIMITER);
-        String clientName = getUniqueNameOfThread();
+        // Send filesize to client
+        int filesize = getFilesize(filename);
+        send(acceptedSocket, filesize + Constant.MESSAGE_DELIMITER);
 
+        String clientName = getUniqueNameOfThread();
+        int numOfChunk = getNumOfChunk(filename);
         for(int i = 1; i <= numOfChunk; i++) {
 
             // Pick a host that have the chunk of the file
@@ -260,6 +262,10 @@ public class DirectoryServer implements Runnable {
         hosts.remove(getUniqueNameOfThread());
     }
 
+    private void handleFilesize(String filename, int filesize) {
+        filesizes.put(filename, filesize);
+    }
+
 //======================================================================================================================
 //======================================= Functions for handling socket ================================================
 
@@ -284,6 +290,15 @@ public class DirectoryServer implements Runnable {
                 int chunkNumber = Integer.parseInt(parsedClientMsg[2]);
 
                 handleInformMsg(filename, chunkNumber);
+                returnMessage = getAckMessage();
+                break;
+
+            case Constant.COMMAND_FILESIZIE:
+                String filename3 = parsedClientMsg[1];
+                int filesize = Integer.parseInt(parsedClientMsg[2]);
+
+                handleFilesize(filename3, filesize);
+
                 returnMessage = getAckMessage();
                 break;
 
@@ -442,6 +457,15 @@ public class DirectoryServer implements Runnable {
             } else {
                 chunk++;
             }
+        }
+    }
+
+    private int getFilesize(String fileName) {
+        Integer size = filesizes.get(fileName);
+        if(size == null) {
+            return 0;
+        } else {
+            return size;
         }
     }
 
