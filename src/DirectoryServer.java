@@ -37,6 +37,7 @@ public class DirectoryServer implements Runnable {
         hosts = new HashMap<>();
         realyDataSemaphores = new HashMap<>();
         transientSocketSemaphores = new HashMap<>();
+        filesizes = new HashMap<>();
     }
 
     // Constructor for creating a new thread
