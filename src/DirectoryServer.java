@@ -533,6 +533,14 @@ public class DirectoryServer implements Runnable {
         printAllHosts();
         printFirstTableContent();
         printSecondTableContent();
+        printFilesizeTable();
+    }
+
+    private void printFilesizeTable() {
+        System.out.println("File size table:");
+        for(String fileName: filesizes.keySet()) {
+            System.out.println("Filename: " + fileName + ", file size: " + filesizes.get(fileName));
+        }
     }
 
     private void printAllHosts() {
