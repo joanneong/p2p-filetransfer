@@ -159,7 +159,7 @@ public class P2PClient {
 
         bos.close();
 
-        int numOfChunks = bytesToReceive/Constant.CHUNK_SIZE;
+        int numOfChunks = bytesToReceive/Constant.CHUNK_SIZE + 1;
         // Only inform the directory server after the whole file has been downloaded
         for (int i = 1; i <= numOfChunks; i++) {
             sendInformMessage(fileName, i);
