@@ -111,10 +111,10 @@ public class P2PClient {
 
         // Check if the file exists (to the directory server's knowledge)
         if (totalChunksToReceive == 0) {
-            File file = new File(Constant.DEFAULT_DIRECTORY  + fileName);
+            // File file = new File(Constant.DEFAULT_DIRECTORY  + fileName);
             // File file = new File("temp/"  + fileName); // for self testing
 
-            file.delete();
+            // file.delete();
             return Constant.ERROR_DOWNLOAD_FILE_NOT_EXIST;
         }
 

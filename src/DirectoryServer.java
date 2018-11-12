@@ -201,15 +201,15 @@ public class DirectoryServer implements Runnable {
             if (bytesRead <= 0) { // Error when reading
                 System.err.println("Bytes read from transient server to " + clientName + " is " + bytesRead);
             }
-            if (bytesRead != Constant.CHUNK_SIZE) {
+            // if (bytesRead != Constant.CHUNK_SIZE) {
                 // This is the last packet
-                buffer = Arrays.copyOfRange(buffer, 0, bytesRead);
-            }
+            //     buffer = Arrays.copyOfRange(buffer, 0, bytesRead);
+            // }
             System.out.println("Bytes successfully read from transient server to " + clientName + " is " + bytesRead);
 
             // Send data back to client
             DataOutputStream toClient = new DataOutputStream(clientSocket.getOutputStream());
-            toClient.write(buffer);
+            toClient.write(buffer, 0 , bytesRead);
             toClient.flush();
 
             releaseSemaphore(clientName, realyDataSemaphores, "Relay");
