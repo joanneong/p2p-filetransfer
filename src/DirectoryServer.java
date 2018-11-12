@@ -2,6 +2,7 @@ import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.*;
+import java.util.concurrent.Semaphore;
 import java.util.stream.Collectors;
 
 public class DirectoryServer implements Runnable {
@@ -15,16 +16,12 @@ public class DirectoryServer implements Runnable {
     // Used to make sure data relaid is in order,
     // i.e. always requesting one chunk at a time in one thread
     // Mapping: unique name of the user requesting the file & boolean
-    private static HashMap<String, Boolean> realyDataSemaphores;
+    private static HashMap<String, Semaphore> realyDataSemaphores;
 
     // Used to make sure directory server send only one command to transient socket at a time
     // Other wise transient socket may ignore some commands of the commands arrived at the same time
     // Mapping: unique name of the transient server & boolean
-    private static HashMap<String, Boolean> transientSocketSemaphores;
-
-    // Boolean values used in semaphore
-    private static final boolean IS_WAITING = true;
-    private static final boolean IS_RELEASED = false;
+    private static HashMap<String, Semaphore> transientSocketSemaphores;
 
     // Values that are unique in every thread
     private Socket acceptedSocket;
@@ -129,6 +126,13 @@ public class DirectoryServer implements Runnable {
         }
 
         hosts.put(uniqueName, host);
+
+        // add semaphore
+        Semaphore semaphore = new Semaphore(1);
+        transientSocketSemaphores.put(uniqueName, semaphore);
+
+        Semaphore semaphore2 = new Semaphore(1);
+        realyDataSemaphores.put(uniqueName, semaphore2);
     }
 
     private void handleInformMsg(String filename, int chunkNumber) {
@@ -175,13 +179,11 @@ public class DirectoryServer implements Runnable {
 
             // Wait for semaphore for sending command to transient server
             waitSemaphore(transientServerName, transientSocketSemaphores, "Transient Socket");
-            lockSemaphore(transientServerName, transientSocketSemaphores, "Transient Socket");
 
             // Send command when socket is free
             send(transientSocket, command);
 
             // Set up semaphore for relaying data
-            lockSemaphore(clientName, realyDataSemaphores, "Relay");
             waitSemaphore(clientName, realyDataSemaphores, "Relay");
         }
     }
@@ -501,32 +503,19 @@ public class DirectoryServer implements Runnable {
         return uniqueName;
     }
 
-    private void lockSemaphore(String uniqueName, HashMap<String, Boolean> semaphore, String type) {
-        System.out.println("Set " + type + " semaphore of " + uniqueName);
-        semaphore.put(uniqueName, IS_WAITING);
-    }
-
-    private Boolean isSemaphoreReleased(String uniqueName, HashMap<String, Boolean> semaphore, String type) {
-        Boolean status = semaphore.get(uniqueName);
-        if(status == null) {
-            System.err.println(type + "semaphore of " + uniqueName + " is null!");
-        }
-        return status == null || status == IS_RELEASED;
-    }
-
-    private void releaseSemaphore(String uniqueName, HashMap<String, Boolean> semaphore, String type) {
+    private void releaseSemaphore(String uniqueName, HashMap<String, Semaphore> semaphores, String type) {
+        Semaphore semaphore = semaphores.get(uniqueName);
+        semaphore.release();
         System.out.println("Release " + type + " semaphore of " + uniqueName);
-        semaphore.put(uniqueName, IS_RELEASED);
     }
 
-    private void waitSemaphore(String uniqueName, HashMap<String, Boolean> semaphore, String type) {
-        while(!isSemaphoreReleased(uniqueName, semaphore, type)) {
-            try {
-                System.out.println("Waiting " + type + " semaphore of " + uniqueName);
-                Thread.sleep(100);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
+    private void waitSemaphore(String uniqueName, HashMap<String, Semaphore> semaphores, String type) {
+        Semaphore semaphore = semaphores.get(uniqueName);
+        System.out.println("Waiting " + type + " semaphore of " + uniqueName);
+        try {
+            semaphore.acquire();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
         }
     }
 
