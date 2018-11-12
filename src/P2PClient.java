@@ -151,7 +151,7 @@ public class P2PClient {
             int bytesRead = clientSocket.getInputStream().read(buffer);
             bytesToReceive += bytesRead;
 
-            bos.write(buffer);
+            bos.write(buffer, 0, bytesRead);
             bos.flush();
 
             System.out.println("Downloaded " + fileName + " read " + bytesRead + " total " + bytesToReceive );
