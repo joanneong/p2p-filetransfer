@@ -52,10 +52,8 @@ public class DirectoryServer implements Runnable {
 
         } else {
             return message
-                    + randomlySelectedHost.getTransientServerSocket().getInetAddress()
-                    + Constant.MESSAGE_DELIMITER
-                    + randomlySelectedHost.getTransientServerSocket().getPort()
-                    + Constant.MESSAGE_DELIMITER;
+                    + randomlySelectedHost.getTransientServerSocket().getInetAddress() + Constant.MESSAGE_DELIMITER
+                    + randomlySelectedHost.getTransientServerSocket().getPort() + Constant.MESSAGE_DELIMITER;
         }
     }
 
@@ -280,7 +278,7 @@ public class DirectoryServer implements Runnable {
                 returnMessage = getAckMessage();
                 break;
 
-            case Constant.COMMAND_INFORM_FILESIZIE:
+            case Constant.COMMAND_INFORM_FILESIZE:
                 String filename3 = parsedClientMsg[1];
                 int filesize = Integer.parseInt(parsedClientMsg[2]);
 
@@ -289,7 +287,7 @@ public class DirectoryServer implements Runnable {
                 returnMessage = getAckMessage();
                 break;
 
-            case Constant.COMMAND_QUERY_FILESIZIE:
+            case Constant.COMMAND_QUERY_FILESIZE:
                 String filename4 = parsedClientMsg[1];
 
                 returnMessage = handleQueryFileSize(filename4);
@@ -384,7 +382,7 @@ public class DirectoryServer implements Runnable {
         while (!acceptedSocket.isClosed()) {
             handleClientSocket(acceptedSocket);
         }
-        System.out.println("Thread for " + uniqueName + " " + clientIp(acceptedSocket) + " is close...\n");
+        System.out.println("Thread for " + uniqueName + " " + clientIp(acceptedSocket) + " is closed...\n");
     }
 
     public static void main(String[] args) {

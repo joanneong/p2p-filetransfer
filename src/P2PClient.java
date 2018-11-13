@@ -14,7 +14,7 @@ public class P2PClient {
     Scanner sc;
 
     // Constructor function for a new P2P client
-    P2PClient(String uniqueName) {
+    P2PClient (String uniqueName) {
         this.uniqueName = uniqueName;
     }
 
@@ -75,7 +75,7 @@ public class P2PClient {
     // Inform the directory server the file size of a file
     private String sendFileSizeMessage(String fileName, int filesize) {
 
-        String toServer = Constant.COMMAND_INFORM_FILESIZIE + Constant.MESSAGE_DELIMITER
+        String toServer = Constant.COMMAND_INFORM_FILESIZE + Constant.MESSAGE_DELIMITER
                 + fileName + Constant.MESSAGE_DELIMITER
                 + filesize + Constant.MESSAGE_DELIMITER;
         pw.println(toServer);
@@ -108,13 +108,12 @@ public class P2PClient {
             String p2pServerIP = message[1];
             String p2pServerPort = message[2];
 
-            return "File " + fileName + " found at port " + p2pServerPort + " of P2P server "
-                    + p2pServerIP + "\n";
+            return "File " + fileName + " found at port " + p2pServerPort + " of P2P server " + p2pServerIP + "\n";
         }
     }
 
     private int getFileSizeFromDirectoryServer(String fileName) {
-        String toServer = Constant.COMMAND_QUERY_FILESIZIE + Constant.MESSAGE_DELIMITER
+        String toServer = Constant.COMMAND_QUERY_FILESIZE + Constant.MESSAGE_DELIMITER
                 + fileName + Constant.MESSAGE_DELIMITER;
         pw.println(toServer);
         pw.flush();
