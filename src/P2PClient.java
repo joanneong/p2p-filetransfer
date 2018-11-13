@@ -114,7 +114,7 @@ public class P2PClient {
     }
 
     private int getFileSizeFromDirectoryServer(String fileName) {
-        String toServer = Constant.COMMAND_QUERY + Constant.MESSAGE_DELIMITER
+        String toServer = Constant.COMMAND_QUERY_FILESIZIE + Constant.MESSAGE_DELIMITER
                 + fileName + Constant.MESSAGE_DELIMITER;
         pw.println(toServer);
         pw.flush();
