@@ -343,7 +343,7 @@ public class P2PClient {
             String nextLine = scanner.readLine();
 
             while (nextLine != null) {
-                System.out.println("Current line read: " + nextLine);
+                //System.out.println("Current line read: " + nextLine);
                 messageFromClient += nextLine;
                 messageFromClient += Constant.MESSAGE_DELIMITER;
 
