@@ -441,19 +441,6 @@ public class DirectoryServer implements Runnable {
         }
     }
 
-    // Find the total number of chunks for a file with the given filename
-    private int getNumOfChunk(String fileName) {
-        int chunk = 0;
-        while(true) {
-            if(getHostsOfChunk(fileName, chunk + 1) == null
-                    || getHostsOfChunk(fileName, chunk + 1).isEmpty()) {
-                return chunk;
-            } else {
-                chunk++;
-            }
-        }
-    }
-
     private int getFilesize(String fileName) {
         Integer size = filesizes.get(fileName);
         if(size == null) {

@@ -129,7 +129,6 @@ public class P2PClient {
 
         // Check if the client already owns the file
         boolean isExist = new File(Constant.DEFAULT_DIRECTORY + fileName).exists();
-        // boolean isExist = new File("temp/" + fileName).exists(); // for self testing
 
         if (isExist) {
             return Constant.ERROR_DOWNLOAD_FILE_EXIST;
@@ -144,7 +143,6 @@ public class P2PClient {
 
         // Prepare to write received file contents
         FileOutputStream fos = new FileOutputStream(Constant.DEFAULT_DIRECTORY  + fileName);
-        // FileOutputStream fos = new FileOutputStream("temp/"  + fileName); // for self testing
 
         BufferedOutputStream bos = new BufferedOutputStream(fos);
 
@@ -343,7 +341,6 @@ public class P2PClient {
             String nextLine = scanner.readLine();
 
             while (nextLine != null) {
-                //System.out.println("Current line read: " + nextLine);
                 messageFromClient += nextLine;
                 messageFromClient += Constant.MESSAGE_DELIMITER;
 

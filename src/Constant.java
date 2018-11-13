@@ -12,7 +12,6 @@ public class Constant {
     public static final String TYPE_CLIENT_SOCKET = "CLIENT";
     public static final String TYPE_TRANSIENT_SOCKET = "TRANSIENT";
 
-    public static final String LOCALHOST_IP = "localhost";
     public static final int DIR_SERVER_PORT = 9090;
 
     public static final int CHUNK_SIZE = 1024;
@@ -32,5 +31,4 @@ public class Constant {
     public static final String ERROR_DOWNLOAD_FILE_EXIST = "File requested already exists in directory!" + MESSAGE_DELIMITER;
     public static final String ERROR_DOWNLOAD_FILE_NOT_EXIST = "File requested does not exist" + MESSAGE_DELIMITER;
     public static final String ERROR_INVALID_COMMAND = "Invalid command" + MESSAGE_DELIMITER;
-    public static final String ERROR_OWN_SERVER_NOT_CLOSED = "Own host server is not closed!" + MESSAGE_DELIMITER;
 }
