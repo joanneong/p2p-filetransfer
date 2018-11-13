@@ -162,6 +162,7 @@ public class P2PClient {
 
             byte[] buffer = new byte[Constant.CHUNK_SIZE];
             int bytesRead = clientSocket.getInputStream().read(buffer);
+            bytesReceived += bytesRead;
 
             bos.write(buffer, 0, bytesRead);
             bos.flush();
