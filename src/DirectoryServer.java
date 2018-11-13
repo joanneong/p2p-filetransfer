@@ -13,11 +13,6 @@ public class DirectoryServer implements Runnable {
     private static HashMap<String, Host> hosts;
     private static HashMap<String, Integer> filesizes;
 
-    // Used to make sure data relaid is in order,
-    // i.e. always requesting one chunk at a time in one thread
-    // Mapping: unique name of the user requesting the file & boolean
-    private static HashMap<String, Semaphore> realyDataSemaphores;
-
     // Used to make sure directory server send only one command to transient socket at a time
     // Other wise transient socket may ignore some commands of the commands arrived at the same time
     // Mapping: unique name of the transient server & boolean
@@ -32,7 +27,6 @@ public class DirectoryServer implements Runnable {
         firstTable = new HashMap<>();
         secondTable = new HashMap<>();
         hosts = new HashMap<>();
-        realyDataSemaphores = new HashMap<>();
         transientSocketSemaphores = new HashMap<>();
         filesizes = new HashMap<>();
     }
@@ -130,9 +124,6 @@ public class DirectoryServer implements Runnable {
         // add semaphore
         Semaphore semaphore = new Semaphore(1);
         transientSocketSemaphores.put(uniqueName, semaphore);
-
-        Semaphore semaphore2 = new Semaphore(1);
-        realyDataSemaphores.put(uniqueName, semaphore2);
     }
 
     private void handleInformMsg(String filename, int chunkNumber) {
@@ -157,35 +148,27 @@ public class DirectoryServer implements Runnable {
         secondTable.put(host, chunksOfTheHost);
     }
 
-    private void handleDownloadFile(String filename) {
-        // Send filesize to client
-        int filesize = getFilesize(filename);
-        send(acceptedSocket, filesize + Constant.MESSAGE_DELIMITER);
+    private void handleDownloadFile(String filename, int chunkNum) {
 
         String clientName = getUniqueNameOfThread();
-        int numOfChunk = getNumOfChunk(filename);
-        for(int i = 1; i <= numOfChunk; i++) {
 
-            // Pick a host that have the chunk of the file
-            Host randomlySelectedHost = getRandomHost(filename, i);
-            Socket transientSocket = randomlySelectedHost.getTransientServerSocket();
-            String transientServerName = randomlySelectedHost.uniqueName;
+        // Pick a host that have the chunk of the file
+        Host randomlySelectedHost = getRandomHost(filename, chunkNum);
 
-            // Send DOWNLOAD command to the transient server
-            String command = Constant.COMMAND_DOWNLOAD + Constant.MESSAGE_DELIMITER
-                             + filename + Constant.MESSAGE_DELIMITER
-                             + i + Constant.MESSAGE_DELIMITER
-                             + getUniqueNameOfThread() + Constant.MESSAGE_DELIMITER;
+        Socket transientSocket = randomlySelectedHost.getTransientServerSocket();
+        String transientServerName = randomlySelectedHost.uniqueName;
 
-            // Wait for semaphore for sending command to transient server
-            waitSemaphore(transientServerName, transientSocketSemaphores, "Transient Socket");
+        // Send DOWNLOAD command to the transient server
+        String command = Constant.COMMAND_DOWNLOAD + Constant.MESSAGE_DELIMITER
+                         + filename + Constant.MESSAGE_DELIMITER
+                         + chunkNum + Constant.MESSAGE_DELIMITER
+                         + clientName + Constant.MESSAGE_DELIMITER;
 
-            // Send command when socket is free
-            send(transientSocket, command);
+        // Wait for semaphore for sending command to transient server
+        waitSemaphore(transientServerName, transientSocketSemaphores, "Transient Socket");
 
-            // Set up semaphore for relaying data
-            waitSemaphore(clientName, realyDataSemaphores, "Relay");
-        }
+        // Send command when socket is free
+        send(transientSocket, command);
     }
 
     private void handleUploadFile(String clientName, Socket transientServerSocket) {
@@ -206,18 +189,13 @@ public class DirectoryServer implements Runnable {
             if (bytesRead <= 0) { // Error when reading
                 System.err.println("Bytes read from transient server to " + clientName + " is " + bytesRead);
             }
-            // if (bytesRead != Constant.CHUNK_SIZE) {
-                // This is the last packet
-            //     buffer = Arrays.copyOfRange(buffer, 0, bytesRead);
-            // }
+
             System.out.println("Bytes successfully read from transient server to " + clientName + " is " + bytesRead);
 
             // Send data back to client
             DataOutputStream toClient = new DataOutputStream(clientSocket.getOutputStream());
             toClient.write(buffer, 0 , bytesRead);
             toClient.flush();
-
-            releaseSemaphore(clientName, realyDataSemaphores, "Relay");
 
             transientServerSocket.close();
 
@@ -269,6 +247,12 @@ public class DirectoryServer implements Runnable {
         filesizes.put(filename, filesize);
     }
 
+    private String handleQueryFileSize(String filename) {
+        // Send filesize to client
+        int filesize = getFilesize(filename);
+        return filesize + Constant.MESSAGE_DELIMITER;
+    }
+
 //======================================================================================================================
 //======================================= Functions for handling socket ================================================
 
@@ -296,13 +280,19 @@ public class DirectoryServer implements Runnable {
                 returnMessage = getAckMessage();
                 break;
 
-            case Constant.COMMAND_FILESIZIE:
+            case Constant.COMMAND_INFORM_FILESIZIE:
                 String filename3 = parsedClientMsg[1];
                 int filesize = Integer.parseInt(parsedClientMsg[2]);
 
                 handleFilesize(filename3, filesize);
 
                 returnMessage = getAckMessage();
+                break;
+
+            case Constant.COMMAND_QUERY_FILESIZIE:
+                String filename4 = parsedClientMsg[1];
+
+                returnMessage = handleQueryFileSize(filename4);
                 break;
 
             case Constant.COMMAND_QUERY:
@@ -315,8 +305,9 @@ public class DirectoryServer implements Runnable {
 
             case Constant.COMMAND_DOWNLOAD:
                 String filename2 = parsedClientMsg[1];
+                int chunkNum = Integer.parseInt(parsedClientMsg[2]);
 
-                handleDownloadFile(filename2);
+                handleDownloadFile(filename2, chunkNum);
 
                 returnMessage = ""; // Empty message won't be sent
                 break;

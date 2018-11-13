@@ -75,7 +75,7 @@ public class P2PClient {
     // Inform the directory server the file size of a file
     private String sendFileSizeMessage(String fileName, int filesize) {
 
-        String toServer = Constant.COMMAND_FILESIZIE + Constant.MESSAGE_DELIMITER
+        String toServer = Constant.COMMAND_INFORM_FILESIZIE + Constant.MESSAGE_DELIMITER
                 + fileName + Constant.MESSAGE_DELIMITER
                 + filesize + Constant.MESSAGE_DELIMITER;
         pw.println(toServer);
@@ -113,6 +113,17 @@ public class P2PClient {
         }
     }
 
+    private int getFileSizeFromDirectoryServer(String fileName) {
+        String toServer = Constant.COMMAND_QUERY + Constant.MESSAGE_DELIMITER
+                + fileName + Constant.MESSAGE_DELIMITER;
+        pw.println(toServer);
+        pw.flush();
+
+        // Get the total number of bytes to expect from the directory server
+        String[] message = getMessageFromClientSocket(clientSocket);
+        return Integer.parseInt(message[0]);
+    }
+
     // Download a file from another peer via the directory server
     private String sendDownloadMessage(String fileName) throws IOException {
 
@@ -124,14 +135,7 @@ public class P2PClient {
             return Constant.ERROR_DOWNLOAD_FILE_EXIST;
         }
 
-        String toServer = Constant.COMMAND_DOWNLOAD + Constant.MESSAGE_DELIMITER
-                + fileName + Constant.MESSAGE_DELIMITER;
-        pw.println(toServer);
-        pw.flush();
-
-        // Get the total number of chunks to expect from the directory server
-        String[] message = getMessageFromClientSocket(clientSocket);
-        int totalBytesToReceive = Integer.parseInt(message[0]);
+        int totalBytesToReceive = getFileSizeFromDirectoryServer(fileName);
 
         // Check if the file exists (to the directory server's knowledge)
         if (totalBytesToReceive == 0) {
@@ -144,27 +148,38 @@ public class P2PClient {
 
         BufferedOutputStream bos = new BufferedOutputStream(fos);
 
-        int bytesToReceive = 0;
-        // Write file contents to new file
-        while (bytesToReceive < totalBytesToReceive) {
+        int bytesReceived = 0;
+        int chunkNum = 1;
+
+        // Get data chunk by chunk
+        while (bytesReceived < totalBytesToReceive) {
+            // Send DOWNLOAD COMMAND
+            String toServer = Constant.COMMAND_DOWNLOAD + Constant.MESSAGE_DELIMITER
+                                + fileName + Constant.MESSAGE_DELIMITER
+                                + chunkNum + Constant.MESSAGE_DELIMITER;
+            pw.println(toServer);
+            pw.flush();
+
             byte[] buffer = new byte[Constant.CHUNK_SIZE];
             int bytesRead = clientSocket.getInputStream().read(buffer);
-            bytesToReceive += bytesRead;
 
             bos.write(buffer, 0, bytesRead);
             bos.flush();
 
-            System.out.println("Downloaded " + fileName + " read " + bytesRead + " total " + bytesToReceive );
+            System.out.println("Downloaded " + fileName + " read " + bytesRead + " total " + bytesReceived );
+
+            chunkNum++;
         }
 
         bos.close();
 
-        int numOfChunks = bytesToReceive/Constant.CHUNK_SIZE + 1;
         // Only inform the directory server after the whole file has been downloaded
+        int numOfChunks = bytesReceived/Constant.CHUNK_SIZE + 1;
         for (int i = 1; i <= numOfChunks; i++) {
             sendInformMessage(fileName, i);
         }
         return "File " + fileName + " downloaded from peer server\n";
+
     }
 
     // Get a list of all available files from the directory server
